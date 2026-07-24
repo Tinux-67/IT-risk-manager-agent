@@ -2,6 +2,7 @@
 """
 Generate CLI alerts from processed EBA regulatory updates.
 Supports different audiences: workfloor, management, C-level.
+Uses Ollama (Mistral-7B) for LLM-powered summaries and insights.
 """
 
 import os
@@ -80,6 +81,100 @@ AUDIENCE_TEMPLATES = {
     },
 }
 
+# LLM Prompts for Ollama
+LLM_PROMPTS = {
+    "summary": """
+    You are a regulatory compliance assistant. Summarize the following regulatory text in 2-3 clear sentences. 
+    Focus on the key requirements, changes, or obligations. 
+    Respond in Dutch if the input is in Dutch, otherwise in English.
+    
+    Text: {text}
+    
+    Summary:
+    """,
+    "key_takeaways": """
+    You are a technical compliance expert. Extract 3-5 actionable key takeaways from the following regulatory text. 
+    Focus on technical implementation, controls, and documentation requirements. 
+    Use bullet points (-) for each takeaway.
+    Respond in Dutch if the input is in Dutch, otherwise in English.
+    
+    Text: {text}
+    
+    Key Takeaways:
+    """,
+    "business_impact": """
+    You are a business analyst. Analyze the business impact of the following regulatory text. 
+    Focus on operational, financial, and reputational risks. 
+    Use bullet points (-) for each impact point.
+    Respond in Dutch if the input is in Dutch, otherwise in English.
+    
+    Text: {text}
+    
+    Business Impact:
+    """,
+    "strategic_implications": """
+    You are a strategic advisor. Identify the strategic implications of the following regulatory text. 
+    Focus on long-term business strategy, competitive positioning, and industry trends. 
+    Use bullet points (-) for each implication.
+    Respond in Dutch if the input is in Dutch, otherwise in English.
+    
+    Text: {text}
+    
+    Strategic Implications:
+    """,
+    "executive_summary": """
+    You are a C-level executive. Provide a concise executive summary (2-3 sentences) of the following regulatory text. 
+    Focus on high-level impact, urgency, and strategic importance. 
+    Respond in Dutch if the input is in Dutch, otherwise in English.
+    
+    Text: {text}
+    
+    Executive Summary:
+    """,
+    "long_term_outlook": """
+    You are a futurist. Provide a long-term outlook (1-2 sentences) based on the following regulatory text. 
+    Focus on future trends, opportunities, and risks. 
+    Respond in Dutch if the input is in Dutch, otherwise in English.
+    
+    Text: {text}
+    
+    Long-Term Outlook:
+    """,
+    "risk_assessment": """
+    You are a risk management expert. Assess the risk level of the following regulatory text. 
+    Provide a risk level (Critical/High/Medium/Low), likelihood (High/Medium/Low), and impact (Severe/Significant/Moderate/Minor). 
+    Respond in Dutch if the input is in Dutch, otherwise in English.
+    
+    Text: {text}
+    
+    Risk Assessment:
+    - Risk Level: 
+    - Likelihood: 
+    - Impact: 
+    """,
+}
+
+
+def get_ollama_response(prompt: str, model: str = "mistral", max_length: int = 2000) -> str:
+    """
+    Get a response from Ollama's LLM (Mistral-7B by default).
+    Returns the generated text or a fallback message if Ollama is not available.
+    """
+    try:
+        import ollama
+        response = ollama.generate(
+            model=model,
+            prompt=prompt,
+            options={"temperature": 0.3, "max_tokens": max_length},
+        )
+        return response["response"].strip()
+    except ImportError:
+        print("⚠️ Ollama is not installed. Install with: pip install ollama")
+        return "[LLM summary not available: Ollama not installed]"
+    except Exception as e:
+        print(f"⚠️ Error generating LLM response: {e}")
+        return f"[LLM summary not available: {str(e)}]"
+
 
 def get_db_connection() -> sqlite3.Connection:
     """Get a connection to the SQLite database."""
@@ -89,92 +184,60 @@ def get_db_connection() -> sqlite3.Connection:
     return sqlite3.connect(DB_PATH)
 
 
-def generate_summary(text: str, max_length: int = 200) -> str:
-    """Generate a short summary from the raw text."""
-    if not text:
-        return "No summary available."
-    
-    # Simple summary: first non-empty paragraph
-    paragraphs = [p.strip() for p in text.split("\n") if p.strip()]
-    if paragraphs:
-        summary = paragraphs[0][:max_length] + "..." if len(paragraphs[0]) > max_length else paragraphs[0]
-        return summary
-    
-    return text[:max_length] + "..." if len(text) > max_length else text
+def generate_llm_summary(text: str) -> str:
+    """Generate a summary using Ollama."""
+    if not text or len(text) < 50:
+        return "No sufficient text available for summary."
+    prompt = LLM_PROMPTS["summary"].format(text=text[:4000])  # Limit input length
+    return get_ollama_response(prompt)
 
 
-def generate_key_takeaways(text: str, risk_area: str) -> str:
-    """Generate key takeaways for workfloor audience."""
-    # Placeholder: In a real implementation, use LLM (e.g., Mistral-7B via Ollama)
-    takeaways = []
-    
-    if "cybersecurity" in risk_area.lower():
-        takeaways.append("- Review cybersecurity controls and policies.")
-        takeaways.append("- Update incident response procedures.")
-    elif "ai" in risk_area.lower():
-        takeaways.append("- Assess AI model compliance with new guidelines.")
-        takeaways.append("- Document AI governance frameworks.")
-    else:
-        takeaways.append("- Review the full regulatory update for technical requirements.")
-        takeaways.append("- Implement necessary controls and documentation.")
-    
-    return "\n".join(takeaways)
+def generate_llm_key_takeaways(text: str) -> str:
+    """Generate key takeaways using Ollama."""
+    if not text or len(text) < 50:
+        return "- No sufficient text available for key takeaways."
+    prompt = LLM_PROMPTS["key_takeaways"].format(text=text[:4000])
+    return get_ollama_response(prompt)
 
 
-def generate_business_impact(text: str, risk_area: str) -> str:
-    """Generate business impact for management audience."""
-    # Placeholder: Replace with LLM-generated content
-    impacts = []
-    
-    if "dora" in risk_area.lower() or "operational resilience" in risk_area.lower():
-        impacts.append("- Potential impact on digital operational resilience.")
-        impacts.append("- May require updates to ICT risk management frameworks.")
-    elif "compliance" in risk_area.lower():
-        impacts.append("- Non-compliance could result in fines or sanctions.")
-        impacts.append("- May affect multiple business units.")
-    else:
-        impacts.append("- Review business processes for alignment with new regulations.")
-        impacts.append("- Allocate budget for compliance activities.")
-    
-    return "\n".join(impacts)
+def generate_llm_business_impact(text: str) -> str:
+    """Generate business impact using Ollama."""
+    if not text or len(text) < 50:
+        return "- No sufficient text available for business impact analysis."
+    prompt = LLM_PROMPTS["business_impact"].format(text=text[:4000])
+    return get_ollama_response(prompt)
 
 
-def generate_risk_assessment(text: str, urgency: str) -> str:
-    """Generate risk assessment for management audience."""
-    if urgency == "Urgent":
-        return "- **Risk Level**: Critical\n- **Likelihood**: High\n- **Impact**: Severe"
-    elif urgency == "High":
-        return "- **Risk Level**: High\n- **Likelihood**: Medium\n- **Impact**: Significant"
-    else:
-        return "- **Risk Level**: Medium\n- **Likelihood**: Low\n- **Impact**: Moderate"
+def generate_llm_strategic_implications(text: str) -> str:
+    """Generate strategic implications using Ollama."""
+    if not text or len(text) < 50:
+        return "- No sufficient text available for strategic implications."
+    prompt = LLM_PROMPTS["strategic_implications"].format(text=text[:4000])
+    return get_ollama_response(prompt)
 
 
-def generate_executive_summary(text: str, risk_area: str) -> str:
-    """Generate executive summary for C-level audience."""
-    # Placeholder: Replace with LLM-generated content
-    return f"This update from the EBA addresses {risk_area}. It requires strategic attention to ensure compliance and mitigate regulatory risk."
+def generate_llm_executive_summary(text: str) -> str:
+    """Generate executive summary using Ollama."""
+    if not text or len(text) < 50:
+        return "No sufficient text available for executive summary."
+    prompt = LLM_PROMPTS["executive_summary"].format(text=text[:4000])
+    return get_ollama_response(prompt)
 
 
-def generate_strategic_implications(text: str, risk_area: str) -> str:
-    """Generate strategic implications for C-level audience."""
-    implications = []
-    
-    if "ai" in risk_area.lower():
-        implications.append("- May impact AI adoption strategy and innovation roadmap.")
-        implications.append("- Consider partnerships with fintech firms for compliance.")
-    elif "cybersecurity" in risk_area.lower():
-        implications.append("- Strengthen cybersecurity posture to avoid reputational damage.")
-        implications.append("- Invest in advanced threat detection and response.")
-    else:
-        implications.append("- Align regulatory compliance with long-term business goals.")
-        implications.append("- Ensure competitive advantage through proactive compliance.")
-    
-    return "\n".join(implications)
+def generate_llm_long_term_outlook(text: str) -> str:
+    """Generate long-term outlook using Ollama."""
+    if not text or len(text) < 50:
+        return "No sufficient text available for long-term outlook."
+    prompt = LLM_PROMPTS["long_term_outlook"].format(text=text[:4000])
+    return get_ollama_response(prompt)
 
 
-def generate_long_term_outlook(text: str, risk_area: str) -> str:
-    """Generate long-term outlook for C-level audience."""
-    return f"The {risk_area} landscape is evolving. Stay ahead by monitoring EBA updates and engaging with industry working groups."
+def generate_llm_risk_assessment(text: str, urgency: str) -> str:
+    """Generate risk assessment using Ollama."""
+    if not text or len(text) < 50:
+        return f"- **Risk Level**: {urgency}\n- **Likelihood**: Medium\n- **Impact**: Moderate"
+    prompt = LLM_PROMPTS["risk_assessment"].format(text=text[:4000])
+    return get_ollama_response(prompt)
 
 
 def get_updates_since_days(conn: sqlite3.Connection, days: int) -> List[Dict]:
@@ -195,48 +258,86 @@ def get_updates_since_days(conn: sqlite3.Connection, days: int) -> List[Dict]:
     return updates
 
 
-def format_alert(update: Dict, audience: str) -> str:
+def format_alert(update: Dict, audience: str, use_llm: bool = True) -> str:
     """Format an alert for the specified audience."""
     template = AUDIENCE_TEMPLATES.get(audience, AUDIENCE_TEMPLATES["workfloor"])
     
-    # Generate audience-specific content
-    summary = generate_summary(update["raw_text"])
-    
-    if audience == "workfloor":
-        key_takeaways = generate_key_takeaways(update["raw_text"], update["risk_area"])
-        alert = template["format"].format(
-            title=update["title"],
-            date=update["publication_date"],
-            risk_area=update["risk_area"],
-            urgency=update["urgency_level"],
-            summary=summary,
-            file_path=update["file_path"],
-            key_takeaways=key_takeaways,
-        )
-    elif audience == "management":
-        business_impact = generate_business_impact(update["raw_text"], update["risk_area"])
-        risk_assessment = generate_risk_assessment(update["raw_text"], update["urgency_level"])
-        alert = template["format"].format(
-            title=update["title"],
-            date=update["publication_date"],
-            risk_area=update["risk_area"],
-            urgency=update["urgency_level"],
-            business_impact=business_impact,
-            risk_assessment=risk_assessment,
-        )
-    else:  # C-level
-        executive_summary = generate_executive_summary(update["raw_text"], update["risk_area"])
-        strategic_implications = generate_strategic_implications(update["raw_text"], update["risk_area"])
-        long_term_outlook = generate_long_term_outlook(update["raw_text"], update["risk_area"])
-        alert = template["format"].format(
-            title=update["title"],
-            date=update["publication_date"],
-            risk_area=update["risk_area"],
-            urgency=update["urgency_level"],
-            executive_summary=executive_summary,
-            strategic_implications=strategic_implications,
-            long_term_outlook=long_term_outlook,
-        )
+    # Generate content based on audience
+    if use_llm:
+        if audience == "workfloor":
+            summary = generate_llm_summary(update["raw_text"])
+            key_takeaways = generate_llm_key_takeaways(update["raw_text"])
+            alert = template["format"].format(
+                title=update["title"],
+                date=update["publication_date"],
+                risk_area=update["risk_area"],
+                urgency=update["urgency_level"],
+                summary=summary,
+                file_path=update["file_path"],
+                key_takeaways=key_takeaways,
+            )
+        elif audience == "management":
+            business_impact = generate_llm_business_impact(update["raw_text"])
+            risk_assessment = generate_llm_risk_assessment(update["raw_text"], update["urgency_level"])
+            alert = template["format"].format(
+                title=update["title"],
+                date=update["publication_date"],
+                risk_area=update["risk_area"],
+                urgency=update["urgency_level"],
+                business_impact=business_impact,
+                risk_assessment=risk_assessment,
+            )
+        else:  # C-level
+            executive_summary = generate_llm_executive_summary(update["raw_text"])
+            strategic_implications = generate_llm_strategic_implications(update["raw_text"])
+            long_term_outlook = generate_llm_long_term_outlook(update["raw_text"])
+            alert = template["format"].format(
+                title=update["title"],
+                date=update["publication_date"],
+                risk_area=update["risk_area"],
+                urgency=update["urgency_level"],
+                executive_summary=executive_summary,
+                strategic_implications=strategic_implications,
+                long_term_outlook=long_term_outlook,
+            )
+    else:
+        # Fallback to simple summaries if LLM is not available
+        summary = update["raw_text"][:200] + "..." if update["raw_text"] else "No summary available."
+        if audience == "workfloor":
+            key_takeaways = "- Review the full document for technical requirements.\n- Implement necessary controls."
+            alert = template["format"].format(
+                title=update["title"],
+                date=update["publication_date"],
+                risk_area=update["risk_area"],
+                urgency=update["urgency_level"],
+                summary=summary,
+                file_path=update["file_path"],
+                key_takeaways=key_takeaways,
+            )
+        elif audience == "management":
+            business_impact = "- Review business processes for compliance.\n- Allocate resources as needed."
+            risk_assessment = f"- **Risk Level**: {update['urgency_level']}\n- **Likelihood**: Medium\n- **Impact**: Moderate"
+            alert = template["format"].format(
+                title=update["title"],
+                date=update["publication_date"],
+                risk_area=update["risk_area"],
+                urgency=update["urgency_level"],
+                business_impact=business_impact,
+                risk_assessment=risk_assessment,
+            )
+        else:  # C-level
+            executive_summary = f"This {update['risk_area']} update requires strategic attention."
+            strategic_implications = "- Align with long-term business goals.\n- Monitor regulatory trends."
+            long_term_outlook = "Stay ahead by engaging with industry working groups."
+            alert = template["format"].format(
+                title=update["title"],
+                date=update["publication_date"],
+                risk_area=update["risk_area"],
+                urgency=update["urgency_level"],
+                executive_summary=executive_summary,
+                strategic_implications=strategic_implications,
+                long_term_outlook=long_term_outlook,
+            )
     
     return f"{template['header']}\n\n{alert}"
 
@@ -248,6 +349,7 @@ def main():
                         default="workfloor", help="Target audience for the alerts (default: workfloor).")
     parser.add_argument("--all", action="store_true", help="Show all updates (ignore --days).")
     parser.add_argument("--urgent-only", action="store_true", help="Only show urgent/high urgency updates.")
+    parser.add_argument("--no-llm", action="store_true", help="Disable LLM (Ollama) for summaries.")
     args = parser.parse_args()
     
     conn = get_db_connection()
@@ -264,11 +366,22 @@ def main():
         print(f"❌ No updates found in the last {args.days} days.")
         return
     
-    print(f"📢 Generating {len(updates)} alert(s) for {args.audience} audience...\n")
+    print(f"📢 Generating {len(updates)} alert(s) for {args.audience} audience...")
+    
+    # Check if Ollama is available
+    use_llm = not args.no_llm
+    if use_llm:
+        try:
+            import ollama
+            print("✅ Using Ollama (Mistral-7B) for LLM-powered summaries.")
+        except ImportError:
+            use_llm = False
+            print("⚠️ Ollama not installed. Using fallback summaries. Install with: pip install ollama")
+    
     print("=" * 80)
     
     for i, update in enumerate(updates, 1):
-        alert = format_alert(update, args.audience)
+        alert = format_alert(update, args.audience, use_llm)
         print(alert)
         print("\n" + "=" * 80 + "\n")
     

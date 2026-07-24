@@ -10,76 +10,89 @@ import sqlite3
 import argparse
 from datetime import datetime, timedelta
 from typing import List, Dict, Optional
+from functools import lru_cache
 
-# Constants
-DB_PATH = "data/processed/regulatory_updates.db"
+from loguru import logger
+
+from config import Config
+
+# Configure logging
+logger.add(
+    Config.LOG_FILE,
+    rotation=Config.LOG_ROTATION,
+    retention=Config.LOG_RETENTION,
+    level=Config.LOG_LEVEL,
+    format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {file}:{line} | {message}",
+)
+
 
 # Audience-specific templates
 AUDIENCE_TEMPLATES = {
     "workfloor": {
-        "header": "🔧 WORKFLOOR ALERT: Technical Action Required",
+        "header": "\ud83d\udd27 WORKFLOOR ALERT: Technical Action Required",
         "format": """
-📌 **Title**: {title}
-📅 **Date**: {date}
-🏷️ **Risk Area**: {risk_area}
-⚠️ **Urgency**: {urgency}
+\ud83d\udccc **Title**: {title}
+\ud83d\udcc5 **Date**: {date}
+\ud83c\udff7\ufe0f **Risk Area**: {risk_area}
+\u26a0\ufe0f **Urgency**: {urgency}
 
-📝 **Summary**:
+\ud83d\udcdd **Summary**:
 {summary}
 
-🔗 **Action Items**:
+\ud83d\udd17 **Action Items**:
 - Review the full update: {file_path}
 - Implement technical controls as described.
 - Document compliance measures.
 
-💡 **Key Takeaways**:
+\ud83d\udca1 **Key Takeaways**:
 {key_takeaways}
         """,
     },
     "management": {
-        "header": "📊 MANAGEMENT ALERT: Compliance Update",
+        "header": "\ud83d\udcca MANAGEMENT ALERT: Compliance Update",
         "format": """
-📌 **Title**: {title}
-📅 **Date**: {date}
-🏷️ **Risk Area**: {risk_area}
-⚠️ **Urgency**: {urgency}
+\ud83d\udccc **Title**: {title}
+\ud83d\udcc5 **Date**: {date}
+\ud83c\udff7\ufe0f **Risk Area**: {risk_area}
+\u26a0\ufe0f **Urgency**: {urgency}
 
-📈 **Business Impact**:
+\ud83d\udcc8 **Business Impact**:
 {business_impact}
 
-🎯 **Strategic Actions**:
+\ud83c\udfaf **Strategic Actions**:
 - Assign ownership for compliance.
 - Allocate resources for implementation.
 - Monitor deadlines and milestones.
 
-📉 **Risk Assessment**:
+\ud83d\udcc9 **Risk Assessment**:
 {risk_assessment}
         """,
     },
     "c-level": {
-        "header": "🚨 C-LEVEL ALERT: Regulatory Risk",
+        "header": "\ud83d\udea8 C-LEVEL ALERT: Regulatory Risk",
         "format": """
-📌 **Title**: {title}
-📅 **Date**: {date}
-🏷️ **Risk Area**: {risk_area}
-⚠️ **Urgency**: {urgency}
+\ud83d\udccc **Title**: {title}
+\ud83d\udcc5 **Date**: {date}
+\ud83c\udff7\ufe0f **Risk Area**: {risk_area}
+\u26a0\ufe0f **Urgency**: {urgency}
 
-💼 **Executive Summary**:
+\ud83d\udcbc **Executive Summary**:
 {executive_summary}
 
-🌍 **Strategic Implications**:
+\ud83c\udf0d **Strategic Implications**:
 {strategic_implications}
 
-📋 **Board-Level Actions**:
+\ud83d\udccb **Board-Level Actions**:
 - Approve budget for compliance initiatives.
 - Ensure alignment with corporate strategy.
 - Communicate with regulators if needed.
 
-🔮 **Long-Term Outlook**:
+\ud83d\udd2e **Long-Term Outlook**:
 {long_term_outlook}
         """,
     },
 }
+
 
 # LLM Prompts for Ollama
 LLM_PROMPTS = {
@@ -155,13 +168,16 @@ LLM_PROMPTS = {
 }
 
 
-def get_ollama_response(prompt: str, model: str = "mistral", max_length: int = 2000) -> str:
+@lru_cache(maxsize=100)
+def get_ollama_response(prompt: str, model: str = Config.OLLAMA_MODEL, max_length: int = 2000) -> str:
     """
     Get a response from Ollama's LLM (Mistral-7B by default).
     Returns the generated text or a fallback message if Ollama is not available.
+    Cached to avoid duplicate calls for the same prompt.
     """
     try:
         import ollama
+        logger.debug(f"Generating LLM response (cached: {len(get_ollama_response.cache_info().hits)} hits)")
         response = ollama.generate(
             model=model,
             prompt=prompt,
@@ -169,19 +185,19 @@ def get_ollama_response(prompt: str, model: str = "mistral", max_length: int = 2
         )
         return response["response"].strip()
     except ImportError:
-        print("⚠️ Ollama is not installed. Install with: pip install ollama")
+        logger.warning("Ollama is not installed. Install with: pip install ollama")
         return "[LLM summary not available: Ollama not installed]"
     except Exception as e:
-        print(f"⚠️ Error generating LLM response: {e}")
+        logger.error(f"Error generating LLM response: {e}")
         return f"[LLM summary not available: {str(e)}]"
 
 
 def get_db_connection() -> sqlite3.Connection:
     """Get a connection to the SQLite database."""
-    if not os.path.exists(DB_PATH):
-        print(f"❌ Database not found at {DB_PATH}. Run process_updates.py first.")
+    if not os.path.exists(Config.DB_PATH):
+        logger.error(f"Database not found at {Config.DB_PATH}. Run process_updates.py first.")
         exit(1)
-    return sqlite3.connect(DB_PATH)
+    return sqlite3.connect(Config.DB_PATH)
 
 
 def generate_llm_summary(text: str) -> str:
@@ -244,24 +260,25 @@ def get_updates_since_days(conn: sqlite3.Connection, days: int) -> List[Dict]:
     """Get updates from the database published in the last N days."""
     cursor = conn.cursor()
     cutoff_date = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
-    
+
     cursor.execute("""
         SELECT id, title, publication_date, risk_area, urgency_level, raw_text, file_path
         FROM updates
         WHERE publication_date >= ? AND is_processed = 1
         ORDER BY publication_date DESC
     """, (cutoff_date,))
-    
+
     columns = [col[0] for col in cursor.description]
     updates = [dict(zip(columns, row)) for row in cursor.fetchall()]
-    
+
+    logger.debug(f"Found {len(updates)} updates since {cutoff_date}")
     return updates
 
 
 def format_alert(update: Dict, audience: str, use_llm: bool = True) -> str:
     """Format an alert for the specified audience."""
     template = AUDIENCE_TEMPLATES.get(audience, AUDIENCE_TEMPLATES["workfloor"])
-    
+
     # Generate content based on audience
     if use_llm:
         if audience == "workfloor":
@@ -338,7 +355,7 @@ def format_alert(update: Dict, audience: str, use_llm: bool = True) -> str:
                 strategic_implications=strategic_implications,
                 long_term_outlook=long_term_outlook,
             )
-    
+
     return f"{template['header']}\n\n{alert}"
 
 
@@ -351,41 +368,48 @@ def main():
     parser.add_argument("--urgent-only", action="store_true", help="Only show urgent/high urgency updates.")
     parser.add_argument("--no-llm", action="store_true", help="Disable LLM (Ollama) for summaries.")
     args = parser.parse_args()
-    
+
+    logger.info(f"Generating alerts for audience: {args.audience}")
+
     conn = get_db_connection()
-    
+
     if args.all:
         updates = get_updates_since_days(conn, 365 * 10)  # 10 years
     else:
         updates = get_updates_since_days(conn, args.days)
-    
+
     if args.urgent_only:
         updates = [u for u in updates if u["urgency_level"] in ["Urgent", "High"]]
-    
+
     if not updates:
-        print(f"❌ No updates found in the last {args.days} days.")
+        logger.warning(f"No updates found in the last {args.days} days.")
+        print(f"\u274c No updates found in the last {args.days} days.")
         return
-    
-    print(f"📢 Generating {len(updates)} alert(s) for {args.audience} audience...")
-    
+
+    logger.info(f"Generating {len(updates)} alert(s) for {args.audience} audience")
+    print(f"\ud83d\udce2 Generating {len(updates)} alert(s) for {args.audience} audience...")
+
     # Check if Ollama is available
     use_llm = not args.no_llm
     if use_llm:
         try:
             import ollama
-            print("✅ Using Ollama (Mistral-7B) for LLM-powered summaries.")
+            logger.success("Using Ollama (Mistral-7B) for LLM-powered summaries.")
+            print("\u2705 Using Ollama (Mistral-7B) for LLM-powered summaries.")
         except ImportError:
             use_llm = False
-            print("⚠️ Ollama not installed. Using fallback summaries. Install with: pip install ollama")
-    
+            logger.warning("Ollama not installed. Using fallback summaries.")
+            print("\u26a0\ufe0f Ollama not installed. Using fallback summaries. Install with: pip install ollama")
+
     print("=" * 80)
-    
+
     for i, update in enumerate(updates, 1):
         alert = format_alert(update, args.audience, use_llm)
         print(alert)
         print("\n" + "=" * 80 + "\n")
-    
+
     conn.close()
+    logger.info("Alert generation completed.")
 
 
 if __name__ == "__main__":

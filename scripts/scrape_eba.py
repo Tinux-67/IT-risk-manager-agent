@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 """
-Scrape EBA (European Banking Authority) regulatory updates from their official website.
+Scrape EBA (European Banking Authority) regulatory updates from their official publications page.
 Saves raw data (PDF/HTML) to data/raw/eba/.
+
+Target URL: https://www.eba.europa.eu/publications-and-media/publications?text=&document_type=248&media_topics=All
 """
 
 import os
 import requests
 from bs4 import BeautifulSoup
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlencode
 import re
 from datetime import datetime
 import argparse
@@ -15,8 +17,15 @@ import time
 
 # Constants
 EBA_BASE_URL = "https://www.eba.europa.eu"
-EBA_REGULATIONS_URL = "https://www.eba.europa.eu/regulation-and-policy"
+EBA_PUBLICATIONS_URL = "https://www.eba.europa.eu/publications-and-media/publications"
 RAW_DATA_DIR = "data/raw/eba"
+
+# Default filter parameters for regulations/guidelines
+DEFAULT_PARAMS = {
+    "text": "",
+    "document_type": "248",  # 248 = Regulations/Guidelines (adjust as needed)
+    "media_topics": "All",
+}
 
 # User-Agent to mimic a browser
 USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
@@ -62,9 +71,16 @@ def download_file(url: str, save_path: str, session: requests.Session = None) ->
         return False
 
 
-def scrape_eba_regulations(session: requests.Session = None) -> list[dict]:
+def build_eba_url(params: dict = None) -> str:
+    """Build the EBA publications URL with query parameters."""
+    if params is None:
+        params = DEFAULT_PARAMS.copy()
+    return f"{EBA_PUBLICATIONS_URL}?{urlencode(params)}"
+
+
+def scrape_eba_regulations(session: requests.Session = None, params: dict = None) -> list[dict]:
     """
-    Scrape the EBA regulations page for new updates.
+    Scrape the EBA publications page for regulatory updates.
     Returns a list of dictionaries with title, URL, and date.
     """
     updates = []
@@ -72,42 +88,39 @@ def scrape_eba_regulations(session: requests.Session = None) -> list[dict]:
     if session is None:
         session = get_session()
     
+    url = build_eba_url(params)
+    
     try:
-        print(f"🔍 Fetching {EBA_REGULATIONS_URL}...")
-        response = session.get(EBA_REGULATIONS_URL, timeout=30)
+        print(f"🔍 Fetching {url}...")
+        response = session.get(url, timeout=30)
         response.raise_for_status()
         soup = BeautifulSoup(response.text, "html.parser")
         
-        # Try to find publication items - EBA uses specific classes
-        # Common selectors for EBA's website:
-        # - div.eba-publication
-        # - div.views-field.views-field-title a
-        # - div.node--type-publication
-        
-        # Try multiple selectors to find publication links
-        selectors = [
-            "div.eba-publication a",
-            "div.views-field.views-field-title a",
-            "div.node--type-publication a",
-            "article a",
-            "div.publication-list-item a",
-            "h2 a, h3 a",  # Fallback: any heading links
+        # EBA's publication items are typically in div.publication-list-item or similar
+        # Try multiple selectors to find publication items
+        publication_selectors = [
+            "div.publication-list-item",
+            "div.views-row",
+            "article.publication",
+            "div.node--type-publication",
+            "div.eba-publication",
+            "tr.publication-row",  # If it's a table
         ]
         
-        found_items = False
-        for selector in selectors:
+        publication_items = []
+        for selector in publication_selectors:
             items = soup.select(selector)
             if items:
-                found_items = True
+                publication_items = items
                 break
         
-        if not found_items:
-            print("⚠️ No publication items found. Trying alternative approach...")
-            # Try to find all links and filter for PDFs or regulation pages
+        if not publication_items:
+            print("⚠️ No publication items found. Trying to find any links...")
+            # Fallback: Find all links that look like publications
             all_links = soup.find_all("a", href=True)
             for link in all_links:
                 href = link["href"]
-                if any(ext in href.lower() for ext in [".pdf", ".html", "/regulation", "/publication"]):
+                if any(keyword in href.lower() for keyword in ["/publications", ".pdf", ".html", "/document"]):
                     title = link.get_text(strip=True) or "Untitled"
                     date_elem = link.find_previous("time") or link.find_previous(class_=re.compile("date", re.I))
                     date = date_elem.get_text(strip=True) if date_elem else "Unknown"
@@ -116,24 +129,24 @@ def scrape_eba_regulations(session: requests.Session = None) -> list[dict]:
                         "url": urljoin(EBA_BASE_URL, href),
                         "date": date,
                     })
-            
-            if not updates:
-                print("⚠️ Could not find any regulation links. The website structure may have changed.")
-                print("💡 Tip: Check the HTML structure of https://www.eba.europa.eu/regulation-and-policy manually.")
             return updates
         
-        # Process found items
-        for item in items:
-            title = item.get_text(strip=True)
-            href = item.get("href", "")
-            if not href:
+        # Process each publication item
+        for item in publication_items:
+            # Try to find title, URL, and date
+            title_elem = item.select_one("h2, h3, .title, a")
+            date_elem = item.select_one("time, .date, .publication-date, .field-date")
+            link_elem = item.select_one("a[href]")
+            
+            if not title_elem or not link_elem:
                 continue
             
-            # Try to find date from parent or sibling elements
-            date_elem = item.find_previous("time") or item.find_next("time") or \
-                        item.find_previous(class_=re.compile("date", re.I)) or \
-                        item.find_next(class_=re.compile("date", re.I))
+            title = title_elem.get_text(strip=True)
+            href = link_elem["href"]
             date = date_elem.get_text(strip=True) if date_elem else "Unknown"
+            
+            # Clean up title (remove extra whitespace, newlines, etc.)
+            title = " ".join(title.split())
             
             full_url = urljoin(EBA_BASE_URL, href)
             updates.append({
@@ -178,9 +191,20 @@ def main():
     parser.add_argument("--limit", type=int, default=10, help="Limit the number of updates to scrape.")
     parser.add_argument("--dry-run", action="store_true", help="Only list updates without downloading.")
     parser.add_argument("--delay", type=float, default=1.0, help="Delay between requests in seconds (default: 1.0).")
+    parser.add_argument("--document-type", type=str, default="248", 
+                        help="Filter by document type (default: 248 for regulations/guidelines).")
+    parser.add_argument("--all-types", action="store_true", 
+                        help="Scrape all document types (no filter).")
     args = parser.parse_args()
     
     print("🔍 Scraping EBA regulatory updates...")
+    
+    # Build parameters
+    params = DEFAULT_PARAMS.copy()
+    if args.all_types:
+        params.pop("document_type", None)  # Remove document_type filter
+    else:
+        params["document_type"] = args.document_type
     
     # Create a session for all requests
     session = get_session()
@@ -189,7 +213,7 @@ def main():
     if args.delay > 0:
         time.sleep(args.delay)
     
-    updates = scrape_eba_regulations(session)
+    updates = scrape_eba_regulations(session, params)
     
     if not updates:
         print("❌ No updates found.")

@@ -3,13 +3,13 @@
 Scrape EBA (European Banking Authority) regulatory updates from their official publications page.
 Saves raw data (PDF/HTML) to data/raw/eba/.
 
-Target URL: https://www.eba.europa.eu/publications-and-media/publications?text=&document_type=248&media_topics=All
+Target URL: https://www.eba.europa.eu/publications-and-media/publications
 """
 
 import os
 import requests
 from bs4 import BeautifulSoup
-from urllib.parse import urljoin, urlencode
+from urllib.parse import urljoin, urlencode, unquote
 import re
 from datetime import datetime
 import argparse
@@ -23,7 +23,7 @@ RAW_DATA_DIR = "data/raw/eba"
 # Default filter parameters for regulations/guidelines
 DEFAULT_PARAMS = {
     "text": "",
-    "document_type": "248",  # 248 = Regulations/Guidelines (adjust as needed)
+    "document_type": "248",  # 248 = Regulations/Guidelines
     "media_topics": "All",
 }
 
@@ -50,7 +50,34 @@ def get_session():
 
 def sanitize_filename(filename: str) -> str:
     """Sanitize filename by removing invalid characters."""
-    return re.sub(r'[\\/*?:"<>|]', "_", filename)
+    # Decode URL-encoded characters first
+    filename = unquote(filename)
+    # Remove invalid characters
+    filename = re.sub(r'[\\/*?:"<>|]', "_", filename)
+    # Replace multiple spaces with single space
+    filename = re.sub(r'\s+', " ", filename).strip()
+    return filename
+
+
+def extract_date_from_url(url: str) -> str:
+    """Extract date from URL (e.g., /2026-07/... -> 2026-07)."""
+    # Look for YYYY-MM pattern in the URL
+    match = re.search(r'/(\d{4}-\d{2})/', url)
+    if match:
+        return match.group(1)
+    return "Unknown"
+
+
+def extract_date_from_filename(filename: str) -> str:
+    """Extract date from filename (e.g., '2026 07 15 Document.pdf' -> 2026-07-15)."""
+    # Look for YYYY MM DD or YYYY-MM-DD pattern
+    match = re.search(r'(\d{4}[-_\s]\d{2}[-_\s]\d{2})', filename)
+    if match:
+        date_str = match.group(1)
+        # Standardize to YYYY-MM-DD
+        date_str = date_str.replace(" ", "-")
+        return date_str
+    return "Unknown"
 
 
 def download_file(url: str, save_path: str, session: requests.Session = None) -> bool:
@@ -84,6 +111,7 @@ def scrape_eba_regulations(session: requests.Session = None, params: dict = None
     Returns a list of dictionaries with title, URL, and date.
     """
     updates = []
+    seen_urls = set()  # To avoid duplicates
     
     if session is None:
         session = get_session()
@@ -96,59 +124,55 @@ def scrape_eba_regulations(session: requests.Session = None, params: dict = None
         response.raise_for_status()
         soup = BeautifulSoup(response.text, "html.parser")
         
-        # EBA's publication items are typically in div.publication-list-item or similar
-        # Try multiple selectors to find publication items
-        publication_selectors = [
-            "div.publication-list-item",
-            "div.views-row",
-            "article.publication",
-            "div.node--type-publication",
-            "div.eba-publication",
-            "tr.publication-row",  # If it's a table
-        ]
+        # EBA's publication links are typically in a list with PDF/HTML links
+        # The structure seems to be: <a href="/sites/default/files/.../document.pdf">
+        # We'll look for all <a> tags with href containing /sites/default/files/
         
-        publication_items = []
-        for selector in publication_selectors:
-            items = soup.select(selector)
-            if items:
-                publication_items = items
-                break
+        all_links = soup.find_all("a", href=True)
         
-        if not publication_items:
-            print("⚠️ No publication items found. Trying to find any links...")
-            # Fallback: Find all links that look like publications
-            all_links = soup.find_all("a", href=True)
-            for link in all_links:
-                href = link["href"]
-                if any(keyword in href.lower() for keyword in ["/publications", ".pdf", ".html", "/document"]):
-                    title = link.get_text(strip=True) or "Untitled"
-                    date_elem = link.find_previous("time") or link.find_previous(class_=re.compile("date", re.I))
-                    date = date_elem.get_text(strip=True) if date_elem else "Unknown"
-                    updates.append({
-                        "title": title,
-                        "url": urljoin(EBA_BASE_URL, href),
-                        "date": date,
-                    })
-            return updates
-        
-        # Process each publication item
-        for item in publication_items:
-            # Try to find title, URL, and date
-            title_elem = item.select_one("h2, h3, .title, a")
-            date_elem = item.select_one("time, .date, .publication-date, .field-date")
-            link_elem = item.select_one("a[href]")
+        for link in all_links:
+            href = link["href"]
+            full_url = urljoin(EBA_BASE_URL, href)
             
-            if not title_elem or not link_elem:
+            # Only process direct file links (PDFs, etc.) from /sites/default/files/
+            if "/sites/default/files/" not in href:
                 continue
             
-            title = title_elem.get_text(strip=True)
-            href = link_elem["href"]
-            date = date_elem.get_text(strip=True) if date_elem else "Unknown"
+            # Skip if we've already seen this URL
+            if full_url in seen_urls:
+                continue
+            seen_urls.add(full_url)
             
-            # Clean up title (remove extra whitespace, newlines, etc.)
-            title = " ".join(title.split())
+            # Extract title from link text or filename
+            title = link.get_text(strip=True)
+            if not title or title == "":
+                # Extract title from URL filename
+                filename = os.path.basename(href)
+                title = os.path.splitext(filename)[0]  # Remove extension
+                title = sanitize_filename(title)
+            else:
+                title = sanitize_filename(title)
             
-            full_url = urljoin(EBA_BASE_URL, href)
+            # Try to extract date from multiple sources
+            date = "Unknown"
+            
+            # 1. Try to find date in parent elements
+            parent = link.parent
+            for _ in range(3):  # Go up 3 levels
+                date_elem = parent.find(class_=re.compile("date", re.I)) if parent else None
+                if date_elem:
+                    date = date_elem.get_text(strip=True)
+                    break
+                parent = parent.parent if parent else None
+            
+            # 2. If no date found, try to extract from URL
+            if date == "Unknown":
+                date = extract_date_from_url(href)
+            
+            # 3. If still no date, try to extract from filename
+            if date == "Unknown":
+                date = extract_date_from_filename(href)
+            
             updates.append({
                 "title": title,
                 "url": full_url,
@@ -174,8 +198,21 @@ def save_raw_update(update: dict, session: requests.Session = None) -> str:
     """
     # Generate filename
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    safe_title = sanitize_filename(update["title"][:50])  # Truncate long titles
-    ext = ".pdf" if update["url"].lower().endswith(".pdf") else ".html"
+    safe_title = sanitize_filename(update["title"][:50])
+    
+    # Determine file extension from URL
+    url_lower = update["url"].lower()
+    if url_lower.endswith(".pdf"):
+        ext = ".pdf"
+    elif url_lower.endswith(".html") or url_lower.endswith(".htm"):
+        ext = ".html"
+    elif url_lower.endswith(".xlsx") or url_lower.endswith(".xls"):
+        ext = ".xlsx"
+    elif url_lower.endswith(".docx") or url_lower.endswith(".doc"):
+        ext = ".docx"
+    else:
+        ext = ".bin"  # Fallback for unknown types
+    
     filename = f"{timestamp}_{safe_title}{ext}"
     save_path = os.path.join(RAW_DATA_DIR, filename)
     

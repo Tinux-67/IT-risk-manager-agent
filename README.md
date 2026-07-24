@@ -57,5 +57,9 @@ docker-compose up -d
 # Access Streamlit at http://localhost:8501
 ```
 
+---
+
+**Note**: This is a test push to verify Codecov integration. Last updated: 2026-07-24.
+
 ## License
 MIT

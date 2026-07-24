@@ -166,7 +166,7 @@ def display_update_card(update: Dict):
         with col2:
             if st.button("🔍 View Details", key=f"view_{update['id']}"):
                 st.session_state["selected_update"] = update
-                st.session_state["page"] = "detail"
+                st.session_state["page"] = "Detail View"
                 st.rerun()
         
         if update.get("summary"):
@@ -190,7 +190,7 @@ def display_update_detail(update: Dict):
     with col2:
         if st.button("← Back to Overview"):
             st.session_state.pop("selected_update", None)
-            st.session_state["page"] = "overview"
+            st.session_state["page"] = "Overview"
             st.rerun()
     
     st.markdown("---")
@@ -327,7 +327,7 @@ def main():
     """Main function for the Streamlit app."""
     # Initialize session state
     if "page" not in st.session_state:
-        st.session_state["page"] = "overview"
+        st.session_state["page"] = "Overview"
     
     if "selected_update" not in st.session_state:
         st.session_state["selected_update"] = None
@@ -335,16 +335,29 @@ def main():
     # Sidebar navigation
     st.sidebar.title("📌 Navigation")
     
-    page = st.sidebar.radio(
+    # Define pages without emojis for session state
+    pages = ["Overview", "Detail View", "Alert Generator", "Scrape & Process"]
+    page_labels = ["🏠 Overview", "🔍 Detail View", "🚨 Alert Generator", "🔄 Scrape & Process"]
+    
+    # Find the current page index
+    try:
+        current_index = pages.index(st.session_state["page"])
+    except ValueError:
+        current_index = 0
+        st.session_state["page"] = pages[0]
+    
+    # Display radio buttons with emojis
+    selected_page = st.sidebar.radio(
         "Go to",
-        ["🏠 Overview", "🔍 Detail View", "🚨 Alert Generator", "🔄 Scrape & Process"],
-        index=["🏠 Overview", "🔍 Detail View", "🚨 Alert Generator", "🔄 Scrape & Process"].index(st.session_state["page"])
+        page_labels,
+        index=current_index
     )
     
-    st.session_state["page"] = page
+    # Map the selected page label back to the page name
+    st.session_state["page"] = pages[page_labels.index(selected_page)]
     
     # Display the selected page
-    if st.session_state["page"] == "🏠 Overview":
+    if st.session_state["page"] == "Overview":
         display_dashboard()
         
         st.markdown("---")
@@ -377,19 +390,19 @@ def main():
         
         conn.close()
     
-    elif st.session_state["page"] == "🔍 Detail View":
+    elif st.session_state["page"] == "Detail View":
         if st.session_state["selected_update"]:
             display_update_detail(st.session_state["selected_update"])
         else:
             st.info("Select an update from the Overview page to view details.")
             if st.button("Go to Overview"):
-                st.session_state["page"] = "🏠 Overview"
+                st.session_state["page"] = "Overview"
                 st.rerun()
     
-    elif st.session_state["page"] == "🚨 Alert Generator":
+    elif st.session_state["page"] == "Alert Generator":
         display_alert_generator()
     
-    elif st.session_state["page"] == "🔄 Scrape & Process":
+    elif st.session_state["page"] == "Scrape & Process":
         display_scrape_and_process()
     
     # Footer

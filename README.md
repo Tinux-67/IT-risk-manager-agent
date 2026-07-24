@@ -2,6 +2,11 @@
 
 A **CLI-based agent** for tracking and interpreting EBA regulations, powered by **Mistral-7B** and **SQLite**.
 
+[![Test](https://github.com/Tinux-67/IT-risk-manager-agent/actions/workflows/test.yml/badge.svg)](https://github.com/Tinux-67/IT-risk-manager-agent/actions/workflows/test.yml)
+[![Lint](https://github.com/Tinux-67/IT-risk-manager-agent/actions/workflows/lint.yml/badge.svg)](https://github.com/Tinux-67/IT-risk-manager-agent/actions/workflows/lint.yml)
+[![Docker Build](https://github.com/Tinux-67/IT-risk-manager-agent/actions/workflows/docker-build.yml/badge.svg)](https://github.com/Tinux-67/IT-risk-manager-agent/actions/workflows/docker-build.yml)
+[![Codecov](https://codecov.io/gl/Tinux-67/IT-risk-manager-agent/branch/main/graph/badge.svg)](https://codecov.io/gl/Tinux-67/IT-risk-manager-agent)
+
 ## Scope
 - **Regulator**: EBA (European Banking Authority)
 - **Focus Areas**: IT Risk Management, Cybersecurity, AI Risk
@@ -27,3 +32,30 @@ A **CLI-based agent** for tracking and interpreting EBA regulations, powered by 
 - `data/raw/eba/`: Raw regulatory updates (PDFs/HTML).
 - `data/processed/`: SQLite database with processed updates.
 - `scripts/`: Python scripts for scraping, processing, and generating alerts.
+
+## Development
+
+### Running Tests Locally
+```bash
+# Install dev dependencies
+pip install -r requirements-dev.txt
+
+# Run tests with coverage
+pytest tests/ --cov=scripts -v
+
+# Run linting
+ruff check scripts/ tests/ app.py config.py
+black --check scripts/ tests/ app.py config.py
+isort --check-only scripts/ tests/ app.py config.py
+```
+
+### Docker
+```bash
+# Build and run with Docker Compose (includes Ollama)
+docker-compose up -d
+
+# Access Streamlit at http://localhost:8501
+```
+
+## License
+MIT

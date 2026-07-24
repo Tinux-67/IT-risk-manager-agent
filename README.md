@@ -59,7 +59,7 @@ docker-compose up -d
 
 ---
 
-**Note**: This is a test push to verify Codecov integration. Last updated: 2026-07-24.
+**Note**: Codecov token updated and retesting integration. Last updated: 2026-07-24.
 
 ## License
 MIT

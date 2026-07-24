@@ -1,0 +1,37 @@
+name: Lint
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    name: Lint and Format
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: requirements-dev.txt
+
+      - name: Install dev dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Run Ruff linter
+        run: ruff check scripts/ tests/ app.py config.py
+
+      - name: Run Black formatter (check only)
+        run: black --check scripts/ tests/ app.py config.py
+
+      - name: Run isort (check only)
+        run: isort --check-only scripts/ tests/ app.py config.py

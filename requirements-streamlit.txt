@@ -1,0 +1,20 @@
+# Core dependencies (same as requirements.txt)
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+pandas>=2.0.0
+
+# CLI and parsing
+argparse>=1.0.0
+
+# Ollama integration (for Mistral-7B)
+ollama>=0.1.0
+
+# Optional: for PDF processing
+PyPDF2>=3.0.0
+pdfminer.six>=20221105
+
+# Optional: for better logging
+loguru>=0.7.0
+
+# Streamlit for web interface
+streamlit>=1.28.0

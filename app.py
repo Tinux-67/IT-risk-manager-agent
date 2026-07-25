@@ -5,12 +5,12 @@ Allows users to view, filter, and generate alerts from EBA regulatory updates.
 """
 
 import os
+import sqlite3
 import subprocess
 import sys
 from datetime import datetime, timedelta
-from typing import List, Dict, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
-import sqlite3
 import streamlit as st
 from loguru import logger
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Streamlit web interface for the IT Risk Manager Agent.
-Allows users to view, filter, and generate alerts from EBA regulatory updates.
+Allows users to view, filter, and generate alerts from EBA and MAS regulatory updates.
 """
 
 import os
@@ -73,6 +73,15 @@ st.markdown("""
         display: inline-block;
         margin-right: 0.5rem;
     }
+    .source-badge {
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        font-weight: bold;
+        display: inline-block;
+        font-size: 0.8rem;
+    }
+    .source-eba { background-color: #1f77b4; color: white; }
+    .source-mas { background-color: #ff6b6b; color: white; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -121,13 +130,14 @@ def run_script(script_name: str, args: List[str] = None) -> Tuple[bool, str]:
 
 
 @st.cache_data(ttl=300)  # Cache for 5 minutes
-def get_updates(conn: sqlite3.Connection, days: int = 365, risk_area: str = None, urgency: str = None) -> List[Dict]:
+def get_updates(conn: sqlite3.Connection, days: int = 365, risk_area: str = None, urgency: str = None, source: str = None) -> List[Dict]:
     """Get updates from the database with optional filters."""
-    logger.debug(f"Getting updates with filters: days={days}, risk_area={risk_area}, urgency={urgency}")
+    logger.debug(f"Getting updates with filters: days={days}, risk_area={risk_area}, urgency={urgency}, source={source}")
     cursor = conn.cursor()
 
     query = """
-        SELECT id, title, publication_date, risk_area, urgency_level, raw_text, file_path, summary
+        SELECT id, title, source_url, file_path, publication_date, 
+               raw_text, summary, risk_area, urgency_level, source
         FROM updates
         WHERE is_processed = 1
     """
@@ -145,6 +155,10 @@ def get_updates(conn: sqlite3.Connection, days: int = 365, risk_area: str = None
     if urgency:
         query += " AND urgency_level = ?"
         params.append(urgency)
+
+    if source:
+        query += " AND source = ?"
+        params.append(source)
 
     query += " ORDER BY publication_date DESC"
 
@@ -174,6 +188,15 @@ def get_urgency_levels(conn: sqlite3.Connection) -> List[str]:
     return [row[0] for row in cursor.fetchall() if row[0]]
 
 
+@st.cache_data(ttl=300)
+def get_sources(conn: sqlite3.Connection) -> List[str]:
+    """Get all unique sources from the database."""
+    logger.debug("Getting unique sources from database")
+    cursor = conn.cursor()
+    cursor.execute("SELECT DISTINCT source FROM updates WHERE source IS NOT NULL")
+    return [row[0] for row in cursor.fetchall() if row[0]]
+
+
 def display_update_card(update: Dict):
     """Display a single update as a card."""
     urgency_class = {
@@ -183,6 +206,11 @@ def display_update_card(update: Dict):
         "Low": "low",
     }.get(update["urgency_level"], "medium")
 
+    source_class = {
+        "EBA": "source-eba",
+        "MAS": "source-mas",
+    }.get(update["source"], "source-eba")
+
     with st.expander(f"\ud83d\udcc4 {update['title']}", expanded=False):
         col1, col2 = st.columns([3, 1])
 
@@ -190,6 +218,7 @@ def display_update_card(update: Dict):
             st.markdown(f"**\ud83d\udcc5 Date:** {update['publication_date']}")
             st.markdown(f"**\ud83c\udff7\ufe0f Risk Area:** <span class='risk-area-tag'>{update['risk_area']}</span>", unsafe_allow_html=True)
             st.markdown(f"**\u26a0\ufe0f Urgency:** <span class='urgency-badge {urgency_class}'>{update['urgency_level']}</span>", unsafe_allow_html=True)
+            st.markdown(f"**\ud83c\udde6\ufe0f Source:** <span class='source-badge {source_class}'>{update['source']}</span>", unsafe_allow_html=True)
             st.markdown(f"**\ud83d\udcc1 File:** `{update['file_path']}`")
 
         with col2:
@@ -208,6 +237,11 @@ def display_update_detail(update: Dict):
     logger.debug(f"Displaying details for update: {update['title']}")
     st.markdown("## \ud83d\udcc4 Update Details")
 
+    source_class = {
+        "EBA": "source-eba",
+        "MAS": "source-mas",
+    }.get(update["source"], "source-eba")
+
     col1, col2 = st.columns([2, 1])
 
     with col1:
@@ -215,6 +249,7 @@ def display_update_detail(update: Dict):
         st.markdown(f"**Publication Date:** {update['publication_date']}")
         st.markdown(f"**Risk Area:** {update['risk_area']}")
         st.markdown(f"**Urgency Level:** {update['urgency_level']}")
+        st.markdown(f"**Source:** <span class='source-badge {source_class}'>{update['source']}</span>", unsafe_allow_html=True)
         st.markdown(f"**File Path:** `{update['file_path']}`")
 
     with col2:
@@ -245,18 +280,22 @@ def display_alert_generator():
 
     conn = get_db_connection()
 
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3, col4 = st.columns(4)
     with col1:
         days = st.number_input("Look back (days)", min_value=1, max_value=365, value=30)
     with col2:
         audience = st.selectbox("Audience", ["workfloor", "management", "c-level"])
     with col3:
         use_llm = st.checkbox("Use LLM (Ollama)", value=True)
+    with col4:
+        source_filter = st.selectbox("Source", ["All"] + get_sources(conn))
+
+    source = source_filter if source_filter != "All" else None
 
     if st.button("\ud83d\udd04 Generate Alerts"):
         with st.spinner("Generating alerts..."):
             # Get updates
-            updates = get_updates(conn, days=days)
+            updates = get_updates(conn, days=days, source=source)
 
             if not updates:
                 logger.warning(f"No updates found in the last {days} days")
@@ -267,7 +306,7 @@ def display_alert_generator():
 
             # Generate alerts for each update
             for i, update in enumerate(updates, 1):
-                with st.expander(f"Alert {i}: {update['title']}", expanded=True):
+                with st.expander(f"Alert {i}: {update['title']} ({update['source']})", expanded=True):
                     # Simulate the alert generation
                     if use_llm:
                         try:
@@ -277,9 +316,9 @@ def display_alert_generator():
                         except Exception as e:
                             logger.error(f"Error generating LLM alert: {e}")
                             st.error(f"Error generating LLM alert: {e}")
-                            st.markdown(f"**Title:** {update['title']}\n**Date:** {update['publication_date']}\n**Risk Area:** {update['risk_area']}")
+                            st.markdown(f"**Title:** {update['title']}\n**Date:** {update['publication_date']}\n**Risk Area:** {update['risk_area']}\n**Source:** {update['source']}")
                     else:
-                        st.markdown(f"**Title:** {update['title']}\n**Date:** {update['publication_date']}\n**Risk Area:** {update['risk_area']}")
+                        st.markdown(f"**Title:** {update['title']}\n**Date:** {update['publication_date']}\n**Risk Area:** {update['risk_area']}\n**Source:** {update['source']}")
                         st.markdown(f"**Summary:** {update.get('summary', 'No summary available.')}")
 
     conn.close()
@@ -290,33 +329,62 @@ def display_scrape_and_process():
     logger.debug("Displaying scrape and process interface")
     st.markdown("## \ud83d\udd04 Scrape & Process")
 
+    # Initialize directories
+    Config.init_dirs()
+
     col1, col2 = st.columns(2)
 
     with col1:
         st.markdown("### \ud83c\udf10 Scrape EBA Updates")
-        limit = st.number_input("Number of updates to scrape", min_value=1, max_value=50, value=5)
-        delay = st.slider("Delay between requests (seconds)", 0.0, 5.0, 1.0, 0.1)
-        document_type = st.text_input("Document type filter", value="248")
+        eba_limit = st.number_input("Number of updates to scrape", min_value=1, max_value=50, value=5, key="eba_limit")
+        eba_delay = st.slider("Delay between requests (seconds)", 0.0, 5.0, 1.0, 0.1, key="eba_delay")
+        eba_document_type = st.text_input("Document type filter", value="248", key="eba_doc_type")
 
-        if st.button("\ud83d\ude80 Start Scraping"):
+        if st.button("\ud83d\ude80 Start EBA Scraping"):
             with st.spinner("Scraping EBA website..."):
                 success, output = run_script(
                     "scrape_eba.py",
-                    ["--limit", str(limit), "--delay", str(delay), "--document-type", document_type]
+                    ["--limit", str(eba_limit), "--delay", str(eba_delay), "--document-type", eba_document_type]
                 )
                 if success:
-                    logger.success("Scraping completed successfully")
-                    st.success("Scraping completed successfully!")
+                    logger.success("EBA scraping completed successfully")
+                    st.success("EBA scraping completed successfully!")
                     st.text(output)
                 else:
-                    logger.error(f"Scraping failed: {output}")
-                    st.error(f"Scraping failed:\n{output}")
+                    logger.error(f"EBA scraping failed: {output}")
+                    st.error(f"EBA scraping failed:\n{output}")
 
     with col2:
-        st.markdown("### \ud83d\udcc1 Process Updates")
+        st.markdown("### \ud83d\udca1 Scrape MAS Updates")
+        mas_limit = st.number_input("Number of updates to scrape", min_value=1, max_value=50, value=5, key="mas_limit")
+        mas_delay = st.slider("Delay between requests (seconds)", 0.0, 5.0, 1.0, 0.1, key="mas_delay")
+        mas_page = st.selectbox(
+            "MAS Page",
+            ["all", "publications", "consultations", "regulations"],
+            key="mas_page"
+        )
 
+        if st.button("\ud83d\ude80 Start MAS Scraping"):
+            with st.spinner("Scraping MAS website..."):
+                success, output = run_script(
+                    "scrape_mas.py",
+                    ["--limit", str(mas_limit), "--delay", str(mas_delay), "--page", mas_page]
+                )
+                if success:
+                    logger.success("MAS scraping completed successfully")
+                    st.success("MAS scraping completed successfully!")
+                    st.text(output)
+                else:
+                    logger.error(f"MAS scraping failed: {output}")
+                    st.error(f"MAS scraping failed:\n{output}")
+
+    st.markdown("---")
+    st.markdown("### \ud83d\udcc1 Process Updates")
+
+    col1, col2, col3 = st.columns(3)
+    with col1:
         if st.button("\ud83d\udd04 Process All Files"):
-            with st.spinner("Processing files..."):
+            with st.spinner("Processing all files..."):
                 success, output = run_script("process_updates.py", ["--all"])
                 if success:
                     logger.success("Processing completed successfully")
@@ -326,6 +394,30 @@ def display_scrape_and_process():
                     logger.error(f"Processing failed: {output}")
                     st.error(f"Processing failed:\n{output}")
 
+    with col2:
+        if st.button("\ud83c\udf10 Process EBA Files"):
+            with st.spinner("Processing EBA files..."):
+                success, output = run_script("process_updates.py", ["--source", "EBA"])
+                if success:
+                    logger.success("EBA processing completed successfully")
+                    st.success("EBA processing completed successfully!")
+                    st.text(output)
+                else:
+                    logger.error(f"EBA processing failed: {output}")
+                    st.error(f"EBA processing failed:\n{output}")
+
+    with col3:
+        if st.button("\ud83d\udca1 Process MAS Files"):
+            with st.spinner("Processing MAS files..."):
+                success, output = run_script("process_updates.py", ["--source", "MAS"])
+                if success:
+                    logger.success("MAS processing completed successfully")
+                    st.success("MAS processing completed successfully!")
+                    st.text(output)
+                else:
+                    logger.error(f"MAS processing failed: {output}")
+                    st.error(f"MAS processing failed:\n{output}")
+
 
 def display_dashboard():
     """Display the main dashboard with metrics."""
@@ -334,11 +426,34 @@ def display_dashboard():
 
     conn = get_db_connection()
 
-    # Get metrics
+    # Get metrics for each source
     cursor = conn.cursor()
+    
+    # Total updates
     cursor.execute("SELECT COUNT(*) FROM updates WHERE is_processed = 1")
     total_updates = cursor.fetchone()[0]
 
+    # EBA specific metrics
+    cursor.execute("SELECT COUNT(*) FROM updates WHERE is_processed = 1 AND source = 'EBA'")
+    eba_total = cursor.fetchone()[0]
+    cursor.execute("SELECT COUNT(*) FROM updates WHERE is_processed = 1 AND source = 'EBA' AND urgency_level = 'Urgent'")
+    eba_urgent = cursor.fetchone()[0]
+    cursor.execute("SELECT COUNT(*) FROM updates WHERE is_processed = 1 AND source = 'EBA' AND urgency_level = 'High'")
+    eba_high = cursor.fetchone()[0]
+    cursor.execute("SELECT COUNT(*) FROM updates WHERE is_processed = 1 AND source = 'EBA' AND publication_date >= date('now', '-7 days')")
+    eba_recent = cursor.fetchone()[0]
+
+    # MAS specific metrics
+    cursor.execute("SELECT COUNT(*) FROM updates WHERE is_processed = 1 AND source = 'MAS'")
+    mas_total = cursor.fetchone()[0]
+    cursor.execute("SELECT COUNT(*) FROM updates WHERE is_processed = 1 AND source = 'MAS' AND urgency_level = 'Urgent'")
+    mas_urgent = cursor.fetchone()[0]
+    cursor.execute("SELECT COUNT(*) FROM updates WHERE is_processed = 1 AND source = 'MAS' AND urgency_level = 'High'")
+    mas_high = cursor.fetchone()[0]
+    cursor.execute("SELECT COUNT(*) FROM updates WHERE is_processed = 1 AND source = 'MAS' AND publication_date >= date('now', '-7 days')")
+    mas_recent = cursor.fetchone()[0]
+
+    # Combined metrics
     cursor.execute("SELECT COUNT(*) FROM updates WHERE urgency_level = 'Urgent'")
     urgent_count = cursor.fetchone()[0]
 
@@ -348,7 +463,8 @@ def display_dashboard():
     cursor.execute("SELECT COUNT(*) FROM updates WHERE publication_date >= date('now', '-7 days')")
     recent_count = cursor.fetchone()[0]
 
-    # Display metrics
+    # Display metrics in two rows
+    st.markdown("### \ud83d\udcca Overall Metrics")
     col1, col2, col3, col4 = st.columns(4)
 
     with col1:
@@ -359,6 +475,31 @@ def display_dashboard():
         st.metric("High Priority", high_count, delta_color="inverse")
     with col4:
         st.metric("Recent (7d)", recent_count)
+
+    st.markdown("---")
+    st.markdown("### \ud83c\udf10 EBA Metrics")
+    col1, col2, col3, col4 = st.columns(4)
+
+    with col1:
+        st.metric("EBA Total", eba_total)
+    with col2:
+        st.metric("EBA Urgent", eba_urgent, delta_color="inverse")
+    with col3:
+        st.metric("EBA High Priority", eba_high, delta_color="inverse")
+    with col4:
+        st.metric("EBA Recent (7d)", eba_recent)
+
+    st.markdown("### \ud83d\udca1 MAS Metrics")
+    col1, col2, col3, col4 = st.columns(4)
+
+    with col1:
+        st.metric("MAS Total", mas_total)
+    with col2:
+        st.metric("MAS Urgent", mas_urgent, delta_color="inverse")
+    with col3:
+        st.metric("MAS High Priority", mas_high, delta_color="inverse")
+    with col4:
+        st.metric("MAS Recent (7d)", mas_recent)
 
     conn.close()
 
@@ -408,7 +549,7 @@ def main():
         conn = get_db_connection()
 
         # Filters
-        col1, col2, col3 = st.columns(3)
+        col1, col2, col3, col4 = st.columns(4)
         with col1:
             days = st.number_input("Last N days", min_value=0, max_value=365, value=30, key="filter_days")
         with col2:
@@ -417,11 +558,15 @@ def main():
         with col3:
             urgency_levels = ["All"] + get_urgency_levels(conn)
             selected_urgency = st.selectbox("Urgency", urgency_levels)
+        with col4:
+            sources = ["All"] + get_sources(conn)
+            selected_source = st.selectbox("Source", sources)
 
         # Get filtered updates
         risk_area_filter = selected_risk_area if selected_risk_area != "All" else None
         urgency_filter = selected_urgency if selected_urgency != "All" else None
-        updates = get_updates(conn, days=days, risk_area=risk_area_filter, urgency=urgency_filter)
+        source_filter = selected_source if selected_source != "All" else None
+        updates = get_updates(conn, days=days, risk_area=risk_area_filter, urgency=urgency_filter, source=source_filter)
 
         if not updates:
             st.info("No updates found matching the filters.")
@@ -451,7 +596,9 @@ def main():
     st.markdown("---")
     st.markdown("""
         <div style='text-align: center; color: #666;'>
-            <p>IT Risk Manager Agent | Powered by Mistral-7B & SQLite | <a href="https://github.com/Tinux-67/IT-risk-manager-agent">GitHub</a></p>
+            <p>IT Risk Manager Agent | Powered by Mistral-7B & SQLite | 
+            <a href="https://github.com/Tinux-67/IT-risk-manager-agent">GitHub</a> | 
+            Supports: EBA & MAS</p>
         </div>
     """, unsafe_allow_html=True)
 

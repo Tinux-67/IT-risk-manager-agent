@@ -2,8 +2,9 @@
 Central configuration for the IT Risk Manager Agent.
 """
 
+import os
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 
 class Config:
@@ -20,7 +21,7 @@ class Config:
     # --- Database ---
     DB_PATH: Path = PROCESSED_DIR / "regulatory_updates.db"
 
-    # --- EBA Scraping ---
+    # --- EBA Scraping (Legacy) ---
     EBA_BASE_URL: str = "https://www.eba.europa.eu"
     EBA_PUBLICATIONS_URL: str = f"{EBA_BASE_URL}/publications-and-media/publications"
     DEFAULT_DELAY: float = 1.0  # seconds between requests
@@ -29,6 +30,13 @@ class Config:
     # --- Ollama ---
     OLLAMA_MODEL: str = "mistral"
     OLLAMA_HOST: str = "http://localhost:11434"
+
+    # --- Apify API (New) ---
+    # Get API key from environment variable or use None
+    APIFY_API_KEY: Optional[str] = os.getenv("APIFY_API_KEY")
+    APIFY_EBA_ACTOR_ID: str = "eu-business-data-search"  # Apify actor for EU business data
+    APIFY_BASE_URL: str = "https://api.apify.com/v2"
+    APIFY_DEFAULT_DATASET: str = "eba-regulations"  # Default dataset for EBA regulations
 
     # --- Risk Areas ---
     RISK_AREAS: List[str] = [
@@ -64,6 +72,9 @@ class Config:
         cls.PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
         cls.LOGS_DIR.mkdir(exist_ok=True)
 
-
-# Initialize directories on import
-Config.init_dirs()
+    @classmethod
+    def check_apify_config(cls) -> bool:
+        """Check if Apify API is configured."""
+        if cls.APIFY_API_KEY is None:
+            return False
+        return True

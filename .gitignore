@@ -46,9 +46,12 @@ htmlcov/
 *.log
 logs/
 
-# Docker
-Dockerfile*
-docker-compose*
+# Docker files - these SHOULD be tracked in Git
+# Dockerfile
+# docker-compose.yml
+# .dockerignore
+
+# Docker build artifacts (ignore these)
 .docker/
 
 # Data (keep directory structure, ignore contents)

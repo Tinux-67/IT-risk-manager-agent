@@ -4,9 +4,6 @@ Scrape EBA (European Banking Authority) regulatory updates from their official p
 Saves raw data (PDF/HTML) to data/raw/eba/.
 
 Target URL: https://www.eba.europa.eu/publications-and-media/publications
-
-NOTE: This script is being replaced by fetch_eba_api.py which uses the Apify API.
-     Use --use-apify to switch to the new API-based approach.
 """
 
 import os
@@ -33,18 +30,6 @@ logger.add(
     level=Config.LOG_LEVEL,
     format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {file}:{line} | {message}",
 )
-
-
-def use_apify_instead():
-    """Check if Apify API is configured and suggest using it."""
-    if Config.check_apify_config():
-        logger.info(
-            "Apify API is configured. Consider using fetch_eba_api.py instead for more reliable results."
-        )
-        print(
-            "\u26a0\ufe0f Apify API is configured. "
-            "Consider using 'python scripts/fetch_eba_api.py' for more reliable results."
-        )
 
 
 def get_session() -> requests.Session:
@@ -251,34 +236,9 @@ def main():
                         help="Filter by document type (default: 248 for regulations/guidelines).")
     parser.add_argument("--all-types", action="store_true", 
                         help="Scrape all document types (no filter).")
-    parser.add_argument("--use-apify", action="store_true",
-                        help="Use Apify API instead of scraping (recommended)")
     args = parser.parse_args()
 
     logger.info("Starting EBA scrape...")
-    
-    # Check if Apify should be used
-    if args.use_apify or Config.check_apify_config():
-        logger.info("Using Apify API (recommended)")
-        print("\u2705 Using Apify API for fetching EBA updates...")
-        
-        # Import here to avoid circular imports
-        from scripts.fetch_eba_api import main as apify_main
-        import sys
-        
-        # Pass arguments to Apify script
-        apify_args = [
-            "--days", str(args.limit),  # Use limit as days for Apify
-            "--limit", str(args.limit),
-        ]
-        if args.dry_run:
-            apify_args.append("--dry-run")
-        
-        sys.argv = ["fetch_eba_api.py"] + apify_args
-        apify_main()
-        return
-
-    use_apify_instead()
 
     # Build parameters
     params = {"document_type": args.document_type}

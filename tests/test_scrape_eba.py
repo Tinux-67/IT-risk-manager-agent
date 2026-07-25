@@ -115,8 +115,8 @@ class TestGetSession:
 class TestScrapeEbaRegulations:
     """Tests for scrape_eba_regulations function."""
 
-    @patch('scripts.scrape_eba.requests.Session.get')
-    @patch('scripts.scrape_eba.BeautifulSoup')
+    @patch("scripts.scrape_eba.requests.Session.get")
+    @patch("scripts.scrape_eba.BeautifulSoup")
     def test_scrape_eba_regulations_success(self, mock_soup, mock_get):
         """Test successful scraping."""
         # Mock response
@@ -140,7 +140,7 @@ class TestScrapeEbaRegulations:
         assert updates[0]["title"] == "Test Document"
         assert Config.EBA_BASE_URL in updates[0]["url"]
 
-    @patch('scripts.scrape_eba.requests.Session.get')
+    @patch("scripts.scrape_eba.requests.Session.get")
     def test_scrape_eba_regulations_http_error(self, mock_get):
         """Test HTTP error handling."""
         mock_response = MagicMock()
@@ -156,8 +156,8 @@ class TestScrapeEbaRegulations:
 class TestDownloadFile:
     """Tests for download_file function."""
 
-    @patch('scripts.scrape_eba.requests.Session.get')
-    @patch('builtins.open', create=True)
+    @patch("scripts.scrape_eba.requests.Session.get")
+    @patch("builtins.open", create=True)
     def test_download_file_success(self, mock_open, mock_get):
         """Test successful file download."""
         mock_response = MagicMock()
@@ -174,7 +174,7 @@ class TestDownloadFile:
         assert result is True
         mock_file.write.assert_called_with(b"test content")
 
-    @patch('scripts.scrape_eba.requests.Session.get')
+    @patch("scripts.scrape_eba.requests.Session.get")
     def test_download_file_http_error(self, mock_get):
         """Test HTTP error during download."""
         mock_response = MagicMock()
@@ -190,9 +190,9 @@ class TestDownloadFile:
 class TestSaveRawUpdate:
     """Tests for save_raw_update function."""
 
-    @patch('scripts.scrape_eba.download_file')
-    @patch('scripts.scrape_eba.Config.RAW_DATA_DIR', new='/tmp/test_raw')
-    @patch('scripts.scrape_eba.datetime')
+    @patch("scripts.scrape_eba.download_file")
+    @patch("scripts.scrape_eba.Config.RAW_DATA_DIR", new="/tmp/test_raw")
+    @patch("scripts.scrape_eba.datetime")
     def test_save_raw_update_success(self, mock_datetime, mock_download):
         """Test successful save of raw update."""
         mock_download.return_value = True
@@ -212,7 +212,7 @@ class TestSaveRawUpdate:
         assert "20240101_120000" in result
         assert result.endswith(".pdf")
 
-    @patch('scripts.scrape_eba.download_file')
+    @patch("scripts.scrape_eba.download_file")
     def test_save_raw_update_failure(self, mock_download):
         """Test failed save of raw update."""
         mock_download.return_value = False

@@ -333,11 +333,9 @@ def process_all_files(conn: sqlite3.Connection) -> None:
 
     if not raw_files:
         logger.warning(f"No raw files found in {Config.RAW_DATA_DIR}")
-        print("\u274c No raw files found in data/raw/eba/")
         return
 
     logger.info(f"Found {len(raw_files)} raw files to process.")
-    print(f"\ud83d\udcc1 Found {len(raw_files)} raw files to process.")
 
     for file_path in raw_files:
         process_file(file_path, conn)
@@ -362,14 +360,12 @@ def main():
     if args.file:
         if not os.path.exists(args.file):
             logger.error(f"File not found: {args.file}")
-            print(f"\u274c File not found: {args.file}")
             return
         process_file(args.file, conn)
     elif args.all:
         process_all_files(conn)
     else:
         logger.error("No action specified. Use --file or --all.")
-        print("\u274c Please specify --file or --all.")
 
     conn.close()
     logger.info("Processing completed.")

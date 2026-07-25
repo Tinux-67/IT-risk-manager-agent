@@ -81,15 +81,14 @@ known_third_party = [
     "requests_cache",
     "tqdm",
     "streamlit",
-    "pytest",
-    "pytest_cov",
-    "ruff",
-    "black",
 ]
 
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+
+# Use the new lint section (non-deprecated)
+[tool.ruff.lint]
 select = [
     "E",   # pycodestyle errors
     "W",   # pycodestyle warnings

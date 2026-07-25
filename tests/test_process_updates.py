@@ -89,7 +89,7 @@ class TestExtractTextFromPdf:
 
     def test_extract_text_from_pdf_success(self, sample_pdf_path):
         """Test successful PDF text extraction."""
-        with patch('PyPDF2.PdfReader') as mock_pdf_reader:
+        with patch("PyPDF2.PdfReader") as mock_pdf_reader:
             mock_page = MagicMock()
             mock_page.extract_text.return_value = "Test PDF content"
             mock_reader = MagicMock()
@@ -101,7 +101,7 @@ class TestExtractTextFromPdf:
 
     def test_extract_text_from_pdf_import_error(self, sample_pdf_path):
         """Test PDF extraction with PyPDF2 not installed."""
-        with patch.dict('sys.modules', {'PyPDF2': None}):
+        with patch.dict("sys.modules", {"PyPDF2": None}):
             result = extract_text_from_pdf(sample_pdf_path)
             assert result == ""
 
@@ -128,7 +128,7 @@ class TestExtractTextFromHtml:
 class TestCategorizeRiskArea:
     """Tests for categorize_risk_area function."""
 
-    @patch('scripts.process_updates.get_ollama_response')
+    @patch("scripts.process_updates.get_ollama_response")
     def test_categorize_risk_area_llm_success(self, mock_ollama):
         """Test categorization with LLM."""
         mock_ollama.return_value = "IT Risk Management"
@@ -136,7 +136,7 @@ class TestCategorizeRiskArea:
         result = categorize_risk_area("This is a test about IT risk management.")
         assert result == "IT Risk Management"
 
-    @patch('scripts.process_updates.get_ollama_response')
+    @patch("scripts.process_updates.get_ollama_response")
     def test_categorize_risk_area_llm_fallback(self, mock_ollama):
         """Test categorization with LLM returning None."""
         mock_ollama.return_value = None
@@ -147,7 +147,7 @@ class TestCategorizeRiskArea:
         # Note: The function checks for keywords in the risk areas list
         assert result in ["Cybersecurity", "IT Risk Management"]
 
-    @patch('scripts.process_updates.get_ollama_response')
+    @patch("scripts.process_updates.get_ollama_response")
     def test_categorize_risk_area_no_match(self, mock_ollama):
         """Test categorization with no matching keywords."""
         mock_ollama.return_value = None
@@ -159,7 +159,7 @@ class TestCategorizeRiskArea:
 class TestAssessUrgency:
     """Tests for assess_urgency function."""
 
-    @patch('scripts.process_updates.get_ollama_response')
+    @patch("scripts.process_updates.get_ollama_response")
     def test_assess_urgency_llm_success(self, mock_ollama):
         """Test urgency assessment with LLM."""
         mock_ollama.return_value = "Urgent"
@@ -167,7 +167,7 @@ class TestAssessUrgency:
         result = assess_urgency("This is an urgent matter.")
         assert result == "Urgent"
 
-    @patch('scripts.process_updates.get_ollama_response')
+    @patch("scripts.process_updates.get_ollama_response")
     def test_assess_urgency_llm_fallback(self, mock_ollama):
         """Test urgency assessment with LLM returning None."""
         mock_ollama.return_value = None
@@ -175,7 +175,7 @@ class TestAssessUrgency:
         result = assess_urgency("This is an urgent matter with deadline.")
         assert result == "Urgent"
 
-    @patch('scripts.process_updates.get_ollama_response')
+    @patch("scripts.process_updates.get_ollama_response")
     def test_assess_urgency_high_keywords(self, mock_ollama):
         """Test urgency assessment with high priority keywords."""
         mock_ollama.return_value = None
@@ -183,7 +183,7 @@ class TestAssessUrgency:
         result = assess_urgency("This is a high risk mandatory requirement.")
         assert result == "High"
 
-    @patch('scripts.process_updates.get_ollama_response')
+    @patch("scripts.process_updates.get_ollama_response")
     def test_assess_urgency_medium_default(self, mock_ollama):
         """Test urgency assessment defaulting to Medium."""
         mock_ollama.return_value = None
@@ -195,7 +195,7 @@ class TestAssessUrgency:
 class TestGenerateSummary:
     """Tests for generate_summary function."""
 
-    @patch('scripts.process_updates.get_ollama_response')
+    @patch("scripts.process_updates.get_ollama_response")
     def test_generate_summary_llm_success(self, mock_ollama):
         """Test summary generation with LLM."""
         mock_ollama.return_value = "This is a test summary."
@@ -205,7 +205,7 @@ class TestGenerateSummary:
         result = generate_summary(long_text)
         assert result == "This is a test summary."
 
-    @patch('scripts.process_updates.get_ollama_response')
+    @patch("scripts.process_updates.get_ollama_response")
     def test_generate_summary_llm_fallback(self, mock_ollama):
         """Test summary generation with LLM returning None."""
         mock_ollama.return_value = None
@@ -214,7 +214,7 @@ class TestGenerateSummary:
         result = generate_summary(long_text)
         assert "This is the first paragraph" in result
 
-    @patch('scripts.process_updates.get_ollama_response')
+    @patch("scripts.process_updates.get_ollama_response")
     def test_generate_summary_short_text(self, mock_ollama):
         """Test summary generation with short text."""
         result = generate_summary("Short text")
@@ -225,10 +225,10 @@ class TestGenerateSummary:
 class TestProcessFile:
     """Tests for process_file function."""
 
-    @patch('scripts.process_updates.extract_text_from_pdf')
-    @patch('scripts.process_updates.categorize_risk_area')
-    @patch('scripts.process_updates.assess_urgency')
-    @patch('scripts.process_updates.generate_summary')
+    @patch("scripts.process_updates.extract_text_from_pdf")
+    @patch("scripts.process_updates.categorize_risk_area")
+    @patch("scripts.process_updates.assess_urgency")
+    @patch("scripts.process_updates.generate_summary")
     def test_process_file_pdf_success(self, mock_summary, mock_urgency, mock_risk, mock_extract):
         """Test processing a PDF file."""
         mock_extract.return_value = "Test PDF content about IT Risk Management"
@@ -277,7 +277,7 @@ class TestProcessFile:
         finally:
             os.unlink(temp_pdf_path)
 
-    @patch('scripts.process_updates.extract_text_from_pdf')
+    @patch("scripts.process_updates.extract_text_from_pdf")
     def test_process_file_no_text(self, mock_extract):
         """Test processing a file with no text."""
         mock_extract.return_value = ""

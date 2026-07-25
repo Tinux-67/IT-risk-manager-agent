@@ -10,8 +10,8 @@ import sys
 from datetime import datetime, timedelta
 from typing import List, Dict, Optional, Tuple
 
-import streamlit as st
 import sqlite3
+import streamlit as st
 from loguru import logger
 
 from config import Config
@@ -366,7 +366,7 @@ def display_dashboard():
 def main():
     """Main function for the Streamlit app."""
     logger.info("Streamlit app main function started")
-    
+
     # Initialize session state
     if "page" not in st.session_state:
         st.session_state["page"] = "Overview"

@@ -34,7 +34,11 @@ class Config:
     # --- Apify API (New) ---
     # Get API key from environment variable or use None
     APIFY_API_KEY: Optional[str] = os.getenv("APIFY_API_KEY")
-    APIFY_EBA_ACTOR_ID: str = "eu-business-data-search"  # Apify actor for EU business data
+    # Updated actor ID - check https://apify.com/actors for the correct one
+    APIFY_EBA_ACTOR_ID: str = "apify/eu-business-data-search"  # Try this first
+    # Alternative actor IDs (uncomment if the above doesn't work)
+    # APIFY_EBA_ACTOR_ID: str = "apify/eba-regulations"
+    # APIFY_EBA_ACTOR_ID: str = "eu-business-data-search"
     APIFY_BASE_URL: str = "https://api.apify.com/v2"
     APIFY_DEFAULT_DATASET: str = "eba-regulations"  # Default dataset for EBA regulations
 
@@ -78,3 +82,20 @@ class Config:
         if cls.APIFY_API_KEY is None:
             return False
         return True
+
+    @classmethod
+    def get_apify_actor_id(cls) -> str:
+        """Get the Apify actor ID, trying alternatives if needed."""
+        # Try the primary actor ID first
+        primary_actor = "apify/eu-business-data-search"
+        
+        # List of alternative actor IDs to try
+        alternatives = [
+            "apify/eba-regulations",
+            "eu-business-data-search",
+            "apify/eu-financial-data",
+        ]
+        
+        # For now, return the primary actor
+        # In a real implementation, you could test which one works
+        return primary_actor

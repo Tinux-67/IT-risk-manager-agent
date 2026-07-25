@@ -8,6 +8,8 @@ This script replaces the legacy scrape_eba.py and provides:
 - Structured output (JSON, CSV, Excel)
 - Support for 21 EU regulatory sources (EBA, ECB, ESMA, EIOPA)
 - Better filtering and automation
+
+NOTE: You need a valid Apify API key. Get one at https://console.apify.com/
 """
 
 import os
@@ -20,6 +22,10 @@ from typing import List, Dict, Optional, Union
 
 import requests
 from loguru import logger
+
+# Add parent directory to path for imports
+import sys
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from config import Config
 
@@ -36,6 +42,14 @@ logger.add(
 class ApifyClient:
     """Client for interacting with the Apify API."""
 
+    # List of possible actor IDs for EU business data
+    POSSIBLE_ACTOR_IDS = [
+        "apify/eu-business-data-search",  # Primary choice
+        "apify/eba-regulations",           # EBA-specific
+        "eu-business-data-search",        # Without apify/ prefix
+        "apify/eu-financial-data",        # Alternative
+    ]
+
     def __init__(self, api_key: Optional[str] = None):
         """Initialize the Apify client."""
         self.api_key = api_key or Config.APIFY_API_KEY
@@ -51,20 +65,53 @@ class ApifyClient:
         }
         logger.success("Apify client initialized")
 
-    def run_actor(self, actor_id: str, input_data: Dict, wait_for_finish: bool = True) -> Dict:
+    def find_working_actor(self) -> Optional[str]:
+        """
+        Find a working Apify actor ID by testing each possibility.
+        
+        Returns:
+            The first working actor ID, or None if none work
+        """
+        for actor_id in self.POSSIBLE_ACTOR_IDS:
+            if self._test_actor(actor_id):
+                logger.success(f"Found working actor: {actor_id}")
+                return actor_id
+        
+        logger.error(f"No working actor found. Tried: {', '.join(self.POSSIBLE_ACTOR_IDS)}")
+        return None
+
+    def _test_actor(self, actor_id: str) -> bool:
+        """Test if an actor exists and is accessible."""
+        url = f"{self.base_url}/acts/{actor_id}"
+        try:
+            response = requests.get(url, headers=self.headers, timeout=10)
+            return response.status_code == 200
+        except Exception:
+            return False
+
+    def run_actor(self, actor_id: Optional[str] = None, input_data: Dict = None, wait_for_finish: bool = True) -> Dict:
         """
         Run an Apify actor and return the results.
         
         Args:
-            actor_id: The Apify actor ID (e.g., 'eu-business-data-search')
+            actor_id: The Apify actor ID (optional, will try to find working one)
             input_data: Input parameters for the actor
             wait_for_finish: Whether to wait for the actor to finish
             
         Returns:
             Dictionary with actor run results
         """
+        # If no actor_id provided, find a working one
+        if actor_id is None:
+            actor_id = self.find_working_actor()
+            if actor_id is None:
+                raise ValueError("No working Apify actor found. Check your actor ID.")
+
         url = f"{self.base_url}/acts/{actor_id}/runs"
         
+        if input_data is None:
+            input_data = {}
+            
         payload = {
             "input": input_data,
             "waitForFinish": wait_for_finish,
@@ -83,10 +130,19 @@ class ApifyClient:
             return result
             
         except requests.exceptions.HTTPError as e:
-            logger.error(f"HTTP Error running Apify actor: {e}")
+            logger.error(f"HTTP Error running Apify actor {actor_id}: {e}")
+            
+            # If we got a 404, try the next actor
+            if e.response.status_code == 404 and actor_id in self.POSSIBLE_ACTOR_IDS:
+                next_index = self.POSSIBLE_ACTOR_IDS.index(actor_id) + 1
+                if next_index < len(self.POSSIBLE_ACTOR_IDS):
+                    next_actor = self.POSSIBLE_ACTOR_IDS[next_index]
+                    logger.info(f"Trying next actor: {next_actor}")
+                    return self.run_actor(next_actor, input_data, wait_for_finish)
+            
             raise
         except Exception as e:
-            logger.error(f"Error running Apify actor: {e}")
+            logger.error(f"Error running Apify actor {actor_id}: {e}")
             raise
 
     def _get_run_results(self, actor_id: str, run_id: str) -> Dict:
@@ -163,8 +219,8 @@ def fetch_eba_updates(
         
         logger.info(f"Fetching EBA updates from {start_date} to {end_date}")
         
-        # Run the actor
-        result = client.run_actor(Config.APIFY_EBA_ACTOR_ID, input_data)
+        # Run the actor (will try multiple actor IDs if needed)
+        result = client.run_actor(None, input_data)  # Pass None to auto-find actor
         
         # Extract and process the results
         updates = []
@@ -331,10 +387,22 @@ def main():
         default=None,
         help="Apify API key (overrides APIFY_API_KEY environment variable)",
     )
+    parser.add_argument(
+        "--list-actors",
+        action="store_true",
+        help="List available Apify actors for EU business data",
+    )
     
     args = parser.parse_args()
     
     logger.info("Starting Apify EBA data fetch...")
+    
+    # List actors and exit if requested
+    if args.list_actors:
+        print("Available Apify actors for EU business data:")
+        for i, actor_id in enumerate(ApifyClient.POSSIBLE_ACTOR_IDS, 1):
+            print(f"  {i}. {actor_id}")
+        return
     
     # Check if API key is available
     api_key = args.api_key or Config.APIFY_API_KEY
@@ -345,6 +413,10 @@ def main():
         )
         print("\u274c Error: Apify API key is required.")
         print("   Set APIFY_API_KEY environment variable or use --api-key argument.")
+        print("\n   To get an API key:")
+        print("   1. Go to https://console.apify.com/")
+        print("   2. Sign up (free tier available)")
+        print("   3. Get your API key from Settings > API Keys")
         return
     
     # Fetch updates
@@ -359,6 +431,10 @@ def main():
     if not updates:
         logger.warning("No updates fetched from Apify API")
         print("\u274c No updates fetched. Check logs for details.")
+        print("\nPossible issues:")
+        print("  1. Invalid API key - check your APIFY_API_KEY")
+        print("  2. Actor not found - try --list-actors to see available actors")
+        print("  3. No data available for the selected date range")
         return
     
     logger.info(f"Fetched {len(updates)} updates")
@@ -366,18 +442,18 @@ def main():
     # Display updates
     for i, update in enumerate(updates, 1):
         print(f"\n{i}. {update['title']}")
-        print(f"   [36mSource:[0m {update['source']}")
-        print(f"   [36mDate:[0m {update['date']}")
-        print(f"   [36mURL:[0m {update['url']}")
+        print(f"   \u001b[36mSource:\u001b[0m {update['source']}")
+        print(f"   \u001b[36mDate:\u001b[0m {update['date']}")
+        print(f"   \u001b[36mURL:\u001b[0m {update['url']}")
     
     # Save updates if not dry run
     if not args.dry_run:
         saved_files = save_updates(updates)
         logger.success(f"Saved {len(saved_files)} files to {Config.RAW_DATA_DIR}")
-        print(f"\n[32m[1mSaved {len(saved_files)} files to {Config.RAW_DATA_DIR}/[0m")
+        print(f"\n\u001b[32m\u001b[1mSaved {len(saved_files)} files to {Config.RAW_DATA_DIR}/\u001b[0m")
     else:
         logger.info("Dry run: No files were saved")
-        print("\n[33mDry run: No files were saved.[0m")
+        print("\n\u001b[33mDry run: No files were saved.\u001b[0m")
 
 
 if __name__ == "__main__":

@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """
-Process raw EBA regulatory updates and store them in a SQLite database.
+Process raw regulatory updates (EBA and MAS) and store them in a SQLite database.
 Extracts metadata, text, and categorizes updates by risk area using Ollama (Mistral-7B).
 """
 
 import os
 import re
 import sqlite3
+import argparse
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
@@ -106,6 +107,7 @@ def init_db() -> sqlite3.Connection:
             summary TEXT,
             risk_area TEXT,
             urgency_level TEXT,
+            source TEXT DEFAULT 'EBA',
             is_processed BOOLEAN DEFAULT 0
         )
     """)
@@ -122,6 +124,7 @@ def init_db() -> sqlite3.Connection:
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_risk_area ON updates(risk_area)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_urgency ON updates(urgency_level)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_is_processed ON updates(is_processed)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_source ON updates(source)")
 
     conn.commit()
     logger.success(f"Database initialized at {Config.DB_PATH}")
@@ -154,6 +157,21 @@ def extract_text_from_html(file_path: str) -> str:
             return soup.get_text(separator="\n", strip=True)
     except Exception as e:
         logger.error(f"Error reading HTML {file_path}: {e}")
+        return ""
+
+
+def extract_text_from_docx(file_path: str) -> str:
+    """Extract text from a Word DOCX file."""
+    try:
+        from docx import Document
+        logger.debug(f"Extracting text from DOCX: {file_path}")
+        doc = Document(file_path)
+        return "\n".join([para.text for para in doc.paragraphs])
+    except ImportError:
+        logger.warning("python-docx not installed. Install with: pip install python-docx")
+        return ""
+    except Exception as e:
+        logger.error(f"Error reading DOCX {file_path}: {e}")
         return ""
 
 
@@ -249,6 +267,17 @@ def generate_summary(text: str) -> str:
     return "No summary available."
 
 
+def determine_source(file_path: str) -> str:
+    """Determine the source (EBA or MAS) based on the file path."""
+    if "mas" in file_path.lower():
+        return "MAS"
+    elif "eba" in file_path.lower():
+        return "EBA"
+    else:
+        # Default to EBA for backward compatibility
+        return "EBA"
+
+
 def process_file(file_path: str, conn: sqlite3.Connection) -> bool:
     """Process a single raw file and store it in the database."""
     try:
@@ -257,9 +286,12 @@ def process_file(file_path: str, conn: sqlite3.Connection) -> bool:
 
         # Extract metadata from filename (e.g., 20240101_120000_title.pdf)
         filename = os.path.basename(file_path)
-        match = re.match(r"(\d{8}_\d{6})_(.+?)(?:\.pdf|\.html|\.xlsx|\.docx)", filename)
+        match = re.match(r"(\d{8}_\d{6})_(.+?)(?:\.pdf|\.html|\.xlsx|\.docx|\.doc)", filename)
         timestamp_str = match.group(1) if match else ""
         title = match.group(2).replace("_", " ") if match else filename
+
+        # Determine source from file path
+        source = determine_source(file_path)
 
         # Extract text based on file type
         if file_path.endswith(".pdf"):
@@ -271,8 +303,7 @@ def process_file(file_path: str, conn: sqlite3.Connection) -> bool:
             raw_text = "[Excel file - text extraction not implemented]"
             logger.warning(f"Excel file detected, text extraction not implemented: {file_path}")
         elif file_path.endswith(".docx") or file_path.endswith(".doc"):
-            raw_text = "[Word file - text extraction not implemented]"
-            logger.warning(f"Word file detected, text extraction not implemented: {file_path}")
+            raw_text = extract_text_from_docx(file_path)
         else:
             logger.error(f"Unsupported file type: {file_path}")
             return False
@@ -297,8 +328,8 @@ def process_file(file_path: str, conn: sqlite3.Connection) -> bool:
         cursor.execute("""
             INSERT INTO updates (
                 title, source_url, file_path, publication_date, 
-                raw_text, summary, risk_area, urgency_level, is_processed
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                raw_text, summary, risk_area, urgency_level, source, is_processed
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             title,
             "",  # source_url (can be updated later)
@@ -308,11 +339,12 @@ def process_file(file_path: str, conn: sqlite3.Connection) -> bool:
             summary,
             risk_area,
             urgency,
+            source,
             True,
         ))
 
         conn.commit()
-        logger.success(f"Processed: {filename} (Risk: {risk_area}, Urgency: {urgency})")
+        logger.success(f"Processed: {filename} (Source: {source}, Risk: {risk_area}, Urgency: {urgency})")
         return True
 
     except Exception as e:
@@ -322,17 +354,27 @@ def process_file(file_path: str, conn: sqlite3.Connection) -> bool:
 
 
 def process_all_files(conn: sqlite3.Connection) -> None:
-    """Process all files in the raw data directory."""
+    """Process all files in the raw data directories (EBA and MAS)."""
     raw_files = []
 
-    # Find all supported files in raw data directory
-    for root, _, files in os.walk(Config.RAW_DATA_DIR):
-        for file in files:
-            if file.lower().endswith((".pdf", ".html", ".htm", ".xlsx", ".xls", ".docx", ".doc")):
-                raw_files.append(os.path.join(root, file))
+    # Find all supported files in EBA raw data directory
+    eba_raw_dir = Config.EBA_RAW_DATA_DIR
+    if os.path.exists(eba_raw_dir):
+        for root, _, files in os.walk(eba_raw_dir):
+            for file in files:
+                if file.lower().endswith((".pdf", ".html", ".htm", ".xlsx", ".xls", ".docx", ".doc")):
+                    raw_files.append(os.path.join(root, file))
+
+    # Find all supported files in MAS raw data directory
+    mas_raw_dir = Config.MAS_RAW_DATA_DIR
+    if os.path.exists(mas_raw_dir):
+        for root, _, files in os.walk(mas_raw_dir):
+            for file in files:
+                if file.lower().endswith((".pdf", ".html", ".htm", ".xlsx", ".xls", ".docx", ".doc")):
+                    raw_files.append(os.path.join(root, file))
 
     if not raw_files:
-        logger.warning(f"No raw files found in {Config.RAW_DATA_DIR}")
+        logger.warning(f"No raw files found in {eba_raw_dir} or {mas_raw_dir}")
         return
 
     logger.info(f"Found {len(raw_files)} raw files to process.")
@@ -341,10 +383,43 @@ def process_all_files(conn: sqlite3.Connection) -> None:
         process_file(file_path, conn)
 
 
+def process_source_files(conn: sqlite3.Connection, source: str = "all") -> None:
+    """Process files from a specific source (EBA or MAS)."""
+    raw_files = []
+    source_dir = None
+
+    if source == "EBA" or source == "all":
+        source_dir = Config.EBA_RAW_DATA_DIR
+        if os.path.exists(source_dir):
+            for root, _, files in os.walk(source_dir):
+                for file in files:
+                    if file.lower().endswith((".pdf", ".html", ".htm", ".xlsx", ".xls", ".docx", ".doc")):
+                        raw_files.append(os.path.join(root, file))
+
+    if source == "MAS" or source == "all":
+        source_dir = Config.MAS_RAW_DATA_DIR
+        if os.path.exists(source_dir):
+            for root, _, files in os.walk(source_dir):
+                for file in files:
+                    if file.lower().endswith((".pdf", ".html", ".htm", ".xlsx", ".xls", ".docx", ".doc")):
+                        raw_files.append(os.path.join(root, file))
+
+    if not raw_files:
+        logger.warning(f"No raw files found for source: {source}")
+        return
+
+    logger.info(f"Found {len(raw_files)} raw files for source '{source}' to process.")
+
+    for file_path in raw_files:
+        process_file(file_path, conn)
+
+
 def main():
-    parser = argparse.ArgumentParser(description="Process raw EBA updates and store in SQLite.")
+    parser = argparse.ArgumentParser(description="Process raw regulatory updates (EBA and MAS) and store in SQLite.")
     parser.add_argument("--file", type=str, help="Process a specific file.")
-    parser.add_argument("--all", action="store_true", help="Process all files in data/raw/eba/.")
+    parser.add_argument("--all", action="store_true", help="Process all files in data/raw/eba/ and data/raw/mas/.")
+    parser.add_argument("--source", type=str, default="all", choices=["all", "EBA", "MAS"],
+                        help="Process files from a specific source (default: all).")
     parser.add_argument("--no-llm", action="store_true", help="Disable LLM (Ollama) for categorization.")
     args = parser.parse_args()
 
@@ -364,8 +439,10 @@ def main():
         process_file(args.file, conn)
     elif args.all:
         process_all_files(conn)
+    elif args.source != "all":
+        process_source_files(conn, args.source)
     else:
-        logger.error("No action specified. Use --file or --all.")
+        logger.error("No action specified. Use --file, --all, or --source.")
 
     conn.close()
     logger.info("Processing completed.")

@@ -5,7 +5,7 @@ A **CLI-based agent** for tracking and interpreting EBA regulations, powered by 
 [![Test](https://github.com/Tinux-67/IT-risk-manager-agent/actions/workflows/test.yml/badge.svg)](https://github.com/Tinux-67/IT-risk-manager-agent/actions/workflows/test.yml)
 [![Lint](https://github.com/Tinux-67/IT-risk-manager-agent/actions/workflows/lint.yml/badge.svg)](https://github.com/Tinux-67/IT-risk-manager-agent/actions/workflows/lint.yml)
 [![Docker Build](https://github.com/Tinux-67/IT-risk-manager-agent/actions/workflows/docker-build.yml/badge.svg)](https://github.com/Tinux-67/IT-risk-manager-agent/actions/workflows/docker-build.yml)
-[![Codecov](https://codecov.io/gl/Tinux-67/IT-risk-manager-agent/branch/main/graph/badge.svg)](https://codecov.io/gl/Tinux-67/IT-risk-manager-agent)
+[![codecov](https://codecov.io/github/Tinux-67/IT-risk-manager-agent/graph/badge.svg?token=MIDSV8D4B2)](https://codecov.io/github/Tinux-67/IT-risk-manager-agent)
 
 ## Scope
 - **Regulator**: EBA (European Banking Authority)
@@ -59,7 +59,7 @@ docker-compose up -d
 
 ---
 
-**Note**: Codecov token updated and retesting integration. Last updated: 2026-07-24.
+**Note**: Codecov badge updated with correct token. Last updated: 2026-07-24.
 
 ## License
 MIT

@@ -10,8 +10,8 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
-  # Allow Node.js 20 for actions that haven't updated yet
-  ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
+  # Force Node.js 24 for all actions (Node.js 20 is deprecated)
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   build-and-push:

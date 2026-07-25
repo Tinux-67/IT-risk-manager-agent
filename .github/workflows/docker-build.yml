@@ -18,7 +18,6 @@ jobs:
     permissions:
       contents: read
       packages: write
-      # Required for pull_request events
       pull-requests: read
 
     steps:
@@ -31,7 +30,6 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-        # Only login if not a pull request (no push permissions in PRs)
         if: github.event_name != 'pull_request'
 
       - name: Extract metadata (tags, labels) for Docker
@@ -51,9 +49,6 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          # Only push if not a pull request
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max

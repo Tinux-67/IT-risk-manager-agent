@@ -31,9 +31,9 @@ from scripts.scraping_utils import (
 # Ensure raw data directory exists
 os.makedirs(Config.EBA_RAW_DATA_DIR, exist_ok=True)
 
-# Configure logging
+# Configure logging with dynamic log file
 logger.add(
-    Config.LOG_FILE,
+    Config.get_log_file(),
     rotation=Config.LOG_ROTATION,
     retention=Config.LOG_RETENTION,
     level=Config.LOG_LEVEL,

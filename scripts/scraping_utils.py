@@ -8,7 +8,7 @@ import os
 import re
 import time
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Union
 from urllib.parse import urljoin, urlencode, unquote
 
 import requests
@@ -16,6 +16,15 @@ from bs4 import BeautifulSoup
 from loguru import logger
 
 from config import Config
+
+# Configure logging with dynamic log file
+logger.add(
+    Config.get_log_file(),
+    rotation=Config.LOG_ROTATION,
+    retention=Config.LOG_RETENTION,
+    level=Config.LOG_LEVEL,
+    format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {file}:{line} | {message}",
+)
 
 
 def get_session() -> requests.Session:
@@ -146,7 +155,7 @@ def download_file(
         return False
 
 
-def build_url(base_url: str, params: Optional[dict] = None) -> str:
+def build_url(base_url: str, params: Optional[Dict] = None) -> str:
     """
     Build a URL with query parameters.
     

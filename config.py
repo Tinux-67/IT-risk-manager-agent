@@ -2,8 +2,9 @@
 Central configuration for the IT Risk Manager Agent.
 """
 
+from datetime import datetime
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 
 class Config:
@@ -64,10 +65,21 @@ class Config:
     SOURCES: List[str] = ["EBA", "MAS"]
 
     # --- Logging ---
-    LOG_FILE: Path = LOGS_DIR / "{time}.log"
     LOG_ROTATION: str = "1 day"
     LOG_RETENTION: str = "7 days"
     LOG_LEVEL: str = "INFO"
+
+    @classmethod
+    def get_log_file(cls) -> Path:
+        """
+        Generate a dynamic log filename with current timestamp.
+        
+        Returns:
+            Path: Full path to the log file (e.g., logs/app_2026-07-26.log)
+        """
+        cls.LOGS_DIR.mkdir(parents=True, exist_ok=True)
+        timestamp = datetime.now().strftime("%Y-%m-%d")
+        return cls.LOGS_DIR / f"app_{timestamp}.log"
 
     @classmethod
     def init_dirs(cls) -> None:
@@ -77,4 +89,4 @@ class Config:
         cls.EBA_RAW_DATA_DIR.mkdir(parents=True, exist_ok=True)
         cls.MAS_RAW_DATA_DIR.mkdir(parents=True, exist_ok=True)
         cls.PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
-        cls.LOGS_DIR.mkdir(exist_ok=True)
+        cls.LOGS_DIR.mkdir(parents=True, exist_ok=True)

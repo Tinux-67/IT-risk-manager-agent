@@ -18,7 +18,7 @@ from config import Config
 
 # Configure logging
 logger.add(
-    Config.LOG_FILE,
+    Config.get_log_file(),
     rotation=Config.LOG_ROTATION,
     retention=Config.LOG_RETENTION,
     level=Config.LOG_LEVEL,

@@ -11,11 +11,11 @@ from pathlib import Path
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from scripts.scrape_eba import (
+from scripts.scraping_utils import (
     sanitize_filename,
     extract_date_from_url,
     extract_date_from_filename,
-    build_eba_url,
+    build_url,
     get_session,
 )
 from config import Config
@@ -84,19 +84,18 @@ class TestExtractDateFromFilename:
         assert extract_date_from_filename("Document.pdf") == "Unknown"
 
 
-class TestBuildEbaUrl:
-    """Tests for build_eba_url function."""
+class TestBuildUrl:
+    """Tests for build_url function."""
 
-    def test_build_eba_url_default(self):
+    def test_build_url_default(self):
         """Test default URL building."""
-        url = build_eba_url()
+        url = build_url(Config.EBA_PUBLICATIONS_URL)
         assert Config.EBA_PUBLICATIONS_URL in url
-        assert "document_type=248" in url
 
-    def test_build_eba_url_custom_params(self):
+    def test_build_url_custom_params(self):
         """Test URL building with custom parameters."""
         params = {"document_type": "123", "text": "test"}
-        url = build_eba_url(params)
+        url = build_url(Config.EBA_PUBLICATIONS_URL, params)
         assert "document_type=123" in url
         assert "text=test" in url
 
@@ -154,9 +153,9 @@ class TestScrapeEbaRegulations:
 
 
 class TestDownloadFile:
-    """Tests for download_file function."""
+    """Tests for download_file function (from scraping_utils)."""
 
-    @patch("scripts.scrape_eba.requests.Session.get")
+    @patch("scripts.scraping_utils.requests.Session.get")
     @patch("builtins.open", create=True)
     def test_download_file_success(self, mock_open, mock_get):
         """Test successful file download."""
@@ -168,61 +167,62 @@ class TestDownloadFile:
         mock_file = MagicMock()
         mock_open.return_value.__enter__.return_value = mock_file
 
-        from scripts.scrape_eba import download_file
+        from scripts.scraping_utils import download_file
         result = download_file("http://example.com/test.pdf", "/tmp/test.pdf")
 
         assert result is True
         mock_file.write.assert_called_with(b"test content")
 
-    @patch("scripts.scrape_eba.requests.Session.get")
+    @patch("scripts.scraping_utils.requests.Session.get")
     def test_download_file_http_error(self, mock_get):
         """Test HTTP error during download."""
         mock_response = MagicMock()
         mock_response.raise_for_status.side_effect = Exception("HTTP Error")
         mock_get.return_value = mock_response
 
-        from scripts.scrape_eba import download_file
+        from scripts.scraping_utils import download_file
         result = download_file("http://example.com/test.pdf", "/tmp/test.pdf")
 
         assert result is False
 
 
 class TestSaveRawUpdate:
-    """Tests for save_raw_update function."""
+    """Tests for save_raw_update function (from scraping_utils)."""
 
-    @patch("scripts.scrape_eba.download_file")
-    @patch("scripts.scrape_eba.Config.RAW_DATA_DIR", new="/tmp/test_raw")
-    @patch("scripts.scrape_eba.datetime")
+    @patch("scripts.scraping_utils.download_file")
+    @patch("scripts.scraping_utils.datetime")
     def test_save_raw_update_success(self, mock_datetime, mock_download):
         """Test successful save of raw update."""
         mock_download.return_value = True
         mock_datetime.now.return_value.strftime.return_value = "20240101_120000"
 
-        from scripts.scrape_eba import save_raw_update
+        from scripts.scraping_utils import save_raw_update
         update = {
             "title": "Test Document",
             "url": "http://example.com/test.pdf",
-            "date": "2024-01-01"
+            "date": "2024-01-01",
+            "source": "EBA",
         }
-        result = save_raw_update(update)
+        result = save_raw_update(update, "/tmp/test_raw")
 
         assert result != ""
-        # The filename will be: timestamp + _ + sanitized_title + .pdf
-        # Since we mocked datetime, it should be: 20240101_120000_Test_Document.pdf
+        # The filename will be: timestamp + _ + sanitized_source + _ + sanitized_title + .pdf
         assert "20240101_120000" in result
+        assert "eba" in result.lower()
         assert result.endswith(".pdf")
 
-    @patch("scripts.scrape_eba.download_file")
+    @patch("scripts.scraping_utils.download_file")
     def test_save_raw_update_failure(self, mock_download):
         """Test failed save of raw update."""
         mock_download.return_value = False
 
-        from scripts.scrape_eba import save_raw_update
+        from scripts.scraping_utils import save_raw_update
         update = {
             "title": "Test Document",
             "url": "http://example.com/test.pdf",
-            "date": "2024-01-01"
+            "date": "2024-01-01",
+            "source": "EBA",
         }
-        result = save_raw_update(update)
+        result = save_raw_update(update, "/tmp/test_raw")
 
         assert result == ""

@@ -14,13 +14,21 @@ import re
 import time
 import argparse
 from datetime import datetime
-from urllib.parse import urljoin, urlencode, unquote
+from urllib.parse import urljoin
 
 import requests
 from bs4 import BeautifulSoup
 from loguru import logger
 
 from config import Config
+from scripts.scraping_utils import (
+    get_session,
+    sanitize_filename,
+    extract_date_from_url,
+    extract_date_from_filename,
+    download_file,
+    save_raw_update,
+)
 
 # Ensure raw data directory exists
 os.makedirs(Config.MAS_RAW_DATA_DIR, exist_ok=True)
@@ -35,80 +43,16 @@ logger.add(
 )
 
 
-def get_session() -> requests.Session:
-    """Create a requests session with headers to mimic a browser."""
-    session = requests.Session()
-    session.headers.update({
-        "User-Agent": Config.USER_AGENT,
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.5",
-        "Accept-Encoding": "gzip, deflate, br",
-        "Connection": "keep-alive",
-        "DNT": "1",
-    })
-    return session
-
-
-def sanitize_filename(filename: str) -> str:
-    """Sanitize filename by removing invalid characters."""
-    # Decode URL-encoded characters first
-    filename = unquote(filename)
-    # Remove invalid characters
-    filename = re.sub(r'[\\/*?:"<>|]', "_", filename)
-    # Replace multiple spaces with single space
-    filename = re.sub(r'\s+', " ", filename).strip()
-    return filename
-
-
-def extract_date_from_url(url: str) -> str:
-    """Extract date from URL (e.g., /2024/07/... -> 2024-07)."""
-    # Look for YYYY/MM or YYYY-MM-DD pattern in the URL
-    match = re.search(r'/(\d{4})[/-](\d{2})', url)
-    if match:
-        year, month = match.groups()
-        return f"{year}-{month}"
-    return "Unknown"
-
-
-def extract_date_from_filename(filename: str) -> str:
-    """Extract date from filename (e.g., '2024-07-15_Document.pdf' -> 2024-07-15)."""
-    # Look for YYYY-MM-DD or YYYYMMDD pattern
-    match = re.search(r'(\d{4}[-_]\d{2}[-_]\d{2})', filename)
-    if match:
-        date_str = match.group(1)
-        # Standardize to YYYY-MM-DD
-        date_str = date_str.replace("_", "-")
-        return date_str
-    return "Unknown"
-
-
-def download_file(url: str, save_path: str, session: requests.Session = None) -> bool:
-    """Download a file from a URL and save it to the specified path."""
-    try:
-        if session is None:
-            session = get_session()
-
-        logger.info(f"Downloading: {url}")
-        response = session.get(url, stream=True, timeout=30)
-        response.raise_for_status()
-
-        with open(save_path, "wb") as f:
-            for chunk in response.iter_content(chunk_size=8192):
-                f.write(chunk)
-        logger.success(f"Downloaded: {save_path}")
-        return True
-    except requests.exceptions.HTTPError as e:
-        logger.error(f"HTTP Error downloading {url}: {e}")
-        return False
-    except Exception as e:
-        logger.error(f"Error downloading {url}: {e}")
-        return False
-
-
 def scrape_mas_publications(session: requests.Session = None) -> list[dict]:
     """
     Scrape the MAS publications page for regulatory updates.
     Returns a list of dictionaries with title, URL, and date.
+    
+    Args:
+        session: Optional requests.Session for connection reuse.
+        
+    Returns:
+        list[dict]: List of updates with 'title', 'url', 'date', and 'source'.
     """
     updates = []
     seen_urls = set()
@@ -197,6 +141,12 @@ def scrape_mas_consultations(session: requests.Session = None) -> list[dict]:
     """
     Scrape the MAS public consultations page for regulatory updates.
     Returns a list of dictionaries with title, URL, and date.
+    
+    Args:
+        session: Optional requests.Session for connection reuse.
+        
+    Returns:
+        list[dict]: List of updates with 'title', 'url', 'date', and 'source'.
     """
     updates = []
     seen_urls = set()
@@ -271,6 +221,12 @@ def scrape_mas_regulations(session: requests.Session = None) -> list[dict]:
     """
     Scrape the MAS regulations and notices page for regulatory updates.
     Returns a list of dictionaries with title, URL, and date.
+    
+    Args:
+        session: Optional requests.Session for connection reuse.
+        
+    Returns:
+        list[dict]: List of updates with 'title', 'url', 'date', and 'source'.
     """
     updates = []
     seen_urls = set()
@@ -341,44 +297,16 @@ def scrape_mas_regulations(session: requests.Session = None) -> list[dict]:
     return updates
 
 
-def save_raw_update(update: dict, session: requests.Session = None) -> str:
-    """
-    Save a raw update (PDF/HTML) to the data/raw/mas/ directory.
-    Returns the path to the saved file.
-    """
-    # Generate filename
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    safe_title = sanitize_filename(update["title"][:50])
-    source_prefix = update.get("source", "MAS").replace("_", "").replace("MAS", "").lower()
-
-    # Determine file extension from URL
-    url_lower = update["url"].lower()
-    if url_lower.endswith(".pdf"):
-        ext = ".pdf"
-    elif url_lower.endswith(".html") or url_lower.endswith(".htm"):
-        ext = ".html"
-    elif url_lower.endswith(".xlsx") or url_lower.endswith(".xls"):
-        ext = ".xlsx"
-    elif url_lower.endswith(".docx") or url_lower.endswith(".doc"):
-        ext = ".docx"
-    else:
-        ext = ".bin"  # Fallback for unknown types
-
-    filename = f"{timestamp}_{source_prefix}_{safe_title}{ext}"
-    save_path = os.path.join(Config.MAS_RAW_DATA_DIR, filename)
-
-    # Download and save
-    if download_file(update["url"], save_path, session):
-        logger.success(f"Saved raw update: {filename}")
-        return save_path
-    logger.error(f"Failed to save raw update: {filename}")
-    return ""
-
-
 def scrape_all_mas(session: requests.Session = None) -> list[dict]:
     """
     Scrape all MAS pages (publications, consultations, regulations).
     Returns a combined list of updates.
+    
+    Args:
+        session: Optional requests.Session for connection reuse.
+        
+    Returns:
+        list[dict]: Combined list of updates from all MAS pages.
     """
     all_updates = []
 
@@ -447,7 +375,7 @@ def main():
         print(f"   \u001b[36mURL:\u001b[0m {update['url']}")
 
         if not args.dry_run:
-            save_raw_update(update, session)
+            save_raw_update(update, str(Config.MAS_RAW_DATA_DIR), session)
             # Add delay between downloads
             if args.delay > 0:
                 time.sleep(args.delay)

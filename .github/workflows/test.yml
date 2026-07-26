@@ -36,6 +36,8 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install -r requirements-dev.txt
+          # Ensure pytest-cov is installed for coverage
+          pip install pytest-cov
 
       - name: Run tests with coverage
         run: |

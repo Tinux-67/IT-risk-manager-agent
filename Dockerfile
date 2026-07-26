@@ -34,6 +34,10 @@ ENV PATH=/home/appuser/.local/bin:$PATH
 # Copy application code
 COPY --chown=appuser:appuser . .
 
+# Create directories with correct permissions
+RUN mkdir -p /app/data/raw/eba /app/data/raw/mas /app/data/processed /app/logs && \
+    chown -R appuser:appuser /app/data /app/logs
+
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \

@@ -11,16 +11,25 @@ import re
 import time
 import argparse
 from datetime import datetime
-from urllib.parse import urljoin, urlencode, unquote
+from urllib.parse import urljoin
 
 import requests
 from bs4 import BeautifulSoup
 from loguru import logger
 
 from config import Config
+from scripts.scraping_utils import (
+    get_session,
+    sanitize_filename,
+    extract_date_from_url,
+    extract_date_from_filename,
+    download_file,
+    build_url,
+    save_raw_update,
+)
 
 # Ensure raw data directory exists
-os.makedirs(Config.RAW_DATA_DIR, exist_ok=True)
+os.makedirs(Config.EBA_RAW_DATA_DIR, exist_ok=True)
 
 # Configure logging
 logger.add(
@@ -32,86 +41,32 @@ logger.add(
 )
 
 
-def get_session() -> requests.Session:
-    """Create a requests session with headers to mimic a browser."""
-    session = requests.Session()
-    session.headers.update({
-        "User-Agent": Config.USER_AGENT,
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.5",
-        "Accept-Encoding": "gzip, deflate, br",
-        "Connection": "keep-alive",
-        "DNT": "1",
-    })
-    return session
-
-
-def sanitize_filename(filename: str) -> str:
-    """Sanitize filename by removing invalid characters."""
-    # Decode URL-encoded characters first
-    filename = unquote(filename)
-    # Remove invalid characters
-    filename = re.sub(r'[\\/*?:"<>|]', "_", filename)
-    # Replace multiple spaces with single space
-    filename = re.sub(r'\s+', " ", filename).strip()
-    return filename
-
-
-def extract_date_from_url(url: str) -> str:
-    """Extract date from URL (e.g., /2026-07/... -> 2026-07)."""
-    # Look for YYYY-MM pattern in the URL
-    match = re.search(r'/(\d{4}-\d{2})/', url)
-    if match:
-        return match.group(1)
-    return "Unknown"
-
-
-def extract_date_from_filename(filename: str) -> str:
-    """Extract date from filename (e.g., '2026 07 15 Document.pdf' -> 2026-07-15)."""
-    # Look for YYYY MM DD or YYYY-MM-DD pattern
-    match = re.search(r'(\d{4}[-_\s]\d{2}[-_\s]\d{2})', filename)
-    if match:
-        date_str = match.group(1)
-        # Standardize to YYYY-MM-DD
-        date_str = date_str.replace(" ", "-")
-        return date_str
-    return "Unknown"
-
-
-def download_file(url: str, save_path: str, session: requests.Session = None) -> bool:
-    """Download a file from a URL and save it to the specified path."""
-    try:
-        if session is None:
-            session = get_session()
-
-        logger.info(f"Downloading: {url}")
-        response = session.get(url, stream=True, timeout=30)
-        response.raise_for_status()
-
-        with open(save_path, "wb") as f:
-            for chunk in response.iter_content(chunk_size=8192):
-                f.write(chunk)
-        logger.success(f"Downloaded: {save_path}")
-        return True
-    except requests.exceptions.HTTPError as e:
-        logger.error(f"HTTP Error downloading {url}: {e}")
-        return False
-    except Exception as e:
-        logger.error(f"Error downloading {url}: {e}")
-        return False
-
-
 def build_eba_url(params: dict = None) -> str:
-    """Build the EBA publications URL with query parameters."""
+    """
+    Build the EBA publications URL with query parameters.
+    
+    Args:
+        params: Dictionary of query parameters (default: {"document_type": "248"}).
+        
+    Returns:
+        str: Full EBA publications URL with query parameters.
+    """
     if params is None:
         params = {"document_type": "248"}  # Default: Regulations/Guidelines
-    return f"{Config.EBA_PUBLICATIONS_URL}?{urlencode(params)}"
+    return build_url(Config.EBA_PUBLICATIONS_URL, params)
 
 
 def scrape_eba_regulations(session: requests.Session = None, params: dict = None) -> list[dict]:
     """
     Scrape the EBA publications page for regulatory updates.
     Returns a list of dictionaries with title, URL, and date.
+    
+    Args:
+        session: Optional requests.Session for connection reuse.
+        params: Dictionary of query parameters for the EBA URL.
+        
+    Returns:
+        list[dict]: List of updates with 'title', 'url', 'date', and 'source'.
     """
     updates = []
     seen_urls = set()  # To avoid duplicates
@@ -177,6 +132,7 @@ def scrape_eba_regulations(session: requests.Session = None, params: dict = None
                 "title": title,
                 "url": full_url,
                 "date": date,
+                "source": "EBA",
             })
 
         logger.success(f"Found {len(updates)} updates on EBA publications page")
@@ -191,39 +147,6 @@ def scrape_eba_regulations(session: requests.Session = None, params: dict = None
         logger.error(f"Error scraping EBA website: {e}")
 
     return updates
-
-
-def save_raw_update(update: dict, session: requests.Session = None) -> str:
-    """
-    Save a raw update (PDF/HTML) to the data/raw/eba/ directory.
-    Returns the path to the saved file.
-    """
-    # Generate filename
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    safe_title = sanitize_filename(update["title"][:50])
-
-    # Determine file extension from URL
-    url_lower = update["url"].lower()
-    if url_lower.endswith(".pdf"):
-        ext = ".pdf"
-    elif url_lower.endswith(".html") or url_lower.endswith(".htm"):
-        ext = ".html"
-    elif url_lower.endswith(".xlsx") or url_lower.endswith(".xls"):
-        ext = ".xlsx"
-    elif url_lower.endswith(".docx") or url_lower.endswith(".doc"):
-        ext = ".docx"
-    else:
-        ext = ".bin"  # Fallback for unknown types
-
-    filename = f"{timestamp}_{safe_title}{ext}"
-    save_path = os.path.join(Config.RAW_DATA_DIR, filename)
-
-    # Download and save
-    if download_file(update["url"], save_path, session):
-        logger.success(f"Saved raw update: {filename}")
-        return save_path
-    logger.error(f"Failed to save raw update: {filename}")
-    return ""
 
 
 def main():
@@ -268,7 +191,7 @@ def main():
         print(f"   \u001b[36mURL:\u001b[0m {update['url']}")
 
         if not args.dry_run:
-            save_raw_update(update, session)
+            save_raw_update(update, str(Config.EBA_RAW_DATA_DIR), session)
             # Add delay between downloads
             if args.delay > 0:
                 time.sleep(args.delay)

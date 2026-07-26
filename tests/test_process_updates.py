@@ -259,7 +259,8 @@ class TestProcessFile:
                     summary TEXT,
                     risk_area TEXT,
                     urgency_level TEXT,
-                    is_processed BOOLEAN DEFAULT 0
+                    is_processed BOOLEAN DEFAULT 0,
+                    source TEXT DEFAULT "EBA"
                 )
             """)
             conn.commit()

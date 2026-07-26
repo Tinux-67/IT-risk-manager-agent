@@ -8,7 +8,7 @@ import os
 import re
 import time
 from datetime import datetime
-from typing import Optional, Union
+from typing import Dict, List, Optional, Union
 from urllib.parse import urljoin, urlencode, unquote
 
 import requests

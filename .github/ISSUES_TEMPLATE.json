@@ -1,0 +1,116 @@
+[
+  {
+    "title": "Fix logging configuratie (dynamische bestandsnamen)",
+    "body": "## Beschrijving\nDe `LOG_FILE` in `config.py` bevat `{time}` die niet dynamisch wordt ingevuld. Dit zorgt ervoor dat logs niet correct worden opgeslagen.\n\n## Doel\n- Vervang `{time}` door een dynamische timestamp (bv. `datetime.now().strftime('%Y%m%d')`).\n- Zorg ervoor dat logbestanden dagelijks roteren.\n\n## Acceptatie Criteria\n- [ ] `LOG_FILE` gebruikt een dynamische timestamp.\n- [ ] Logs worden correct opgeslagen in `logs/app_YYYYMMDD.log`.\n- [ ] Alle tests slagen.\n\n## Labels\n- bug\n- logging\n- high-priority\n\n## Milestone\nMilestone 1: Code Kwaliteit & Bugfixes",
+    "labels": ["bug", "logging", "high-priority"],
+    "milestone": "Milestone 1: Code Kwaliteit & Bugfixes"
+  },
+  {
+    "title": "Voeg environment variables toe voor configuratie",
+    "body": "## Beschrijving\nHardcoded waarden in `config.py` (bv. `OLLAMA_HOST`, `DB_PATH`) moeten vervangen worden door environment variables.\n\n## Doel\n- Voeg `.env.example` toe met alle configuratie-opties.\n- Gebruik `os.getenv()` in `config.py` voor dynamische configuratie.\n- Voeg `python-dotenv` toe aan `requirements.txt`.\n\n## Acceptatie Criteria\n- [ ] `.env.example` bestaat met alle benodigde variabelen.\n- [ ] `config.py` gebruikt `os.getenv()` met fallback waarden.\n- [ ] `python-dotenv` staat in `requirements.txt`.\n- [ ] Docker Compose gebruikt environment variables.\n\n## Labels\n- enhancement\n- config\n- high-priority\n\n## Milestone\nMilestone 1: Code Kwaliteit & Bugfixes",
+    "labels": ["enhancement", "config", "high-priority"],
+    "milestone": "Milestone 1: Code Kwaliteit & Bugfixes"
+  },
+  {
+    "title": "Voeg pre-commit hooks toe",
+    "body": "## Beschrijving\nVoeg pre-commit hooks toe om codekwaliteit te waarborgen voor elke commit.\n\n## Doel\n- Voeg `.pre-commit-config.yaml` toe met hooks voor `ruff`, `black`, `isort`, en `mypy`.\n- Configureer GitHub Actions om pre-commit hooks te draaien.\n\n## Acceptatie Criteria\n- [ ] `.pre-commit-config.yaml` bestaat.\n- [ ] Hooks voor `ruff`, `black`, `isort`, `mypy` zijn geconfigureerd.\n- [ ] Alle hooks slagen lokaal.\n\n## Labels\n- testing\n- ci\n- high-priority\n\n## Milestone\nMilestone 1: Code Kwaliteit & Bugfixes",
+    "labels": ["testing", "ci", "high-priority"],
+    "milestone": "Milestone 1: Code Kwaliteit & Bugfixes"
+  },
+  {
+    "title": "Voeg parallelle verwerking toe in process_updates.py",
+    "body": "## Beschrijving\nDe `process_updates.py` verwerkt bestanden sequentieel, wat traag is bij grote datasets.\n\n## Doel\n- Gebruik `ThreadPoolExecutor` voor parallelle verwerking.\n- Voeg een `--workers` argument toe om het aantal threads te configureren.\n\n## Acceptatie Criteria\n- [ ] `ThreadPoolExecutor` wordt gebruikt in `process_all_files()`.\n- [ ] `--workers` argument is toegevoegd.\n- [ ] Prestaties zijn verbeterd (test met 10+ bestanden).\n\n## Labels\n- performance\n- refactor\n- medium-priority\n\n## Milestone\nMilestone 2: Prestatie Optimalisaties",
+    "labels": ["performance", "refactor", "medium-priority"],
+    "milestone": "Milestone 2: Prestatie Optimalisaties"
+  },
+  {
+    "title": "Voeg Ollama caching toe",
+    "body": "## Beschrijving\nOllama API calls worden niet gecached, wat zorgt voor vertraging en onnodige kosten.\n\n## Doel\n- Gebruik `requests-cache` voor Ollama responses.\n- Voeg een cache-tabel toe aan de database als alternatief.\n\n## Acceptatie Criteria\n- [ ] Ollama responses worden gecached.\n- [ ] Cache verloopt na 1 uur.\n- [ ] Geen duplicate API calls voor dezelfde prompts.\n\n## Labels\n- performance\n- llm\n- medium-priority\n\n## Milestone\nMilestone 2: Prestatie Optimalisaties",
+    "labels": ["performance", "llm", "medium-priority"],
+    "milestone": "Milestone 2: Prestatie Optimalisaties"
+  },
+  {
+    "title": "Voeg ontbrekende database indexes toe",
+    "body": "## Beschrijving\nDe database mist enkele indexes voor veelgebruikte queries in `app.py`.\n\n## Doel\n- Voeg `idx_source`, `idx_source_risk_area`, `idx_source_urgency` toe.\n- Gebruik `EXPLAIN QUERY PLAN` om queries te optimaliseren.\n\n## Acceptatie Criteria\n- [ ] Alle ontbrekende indexes zijn toegevoegd.\n- [ ] Queries in `app.py` zijn geoptimaliseerd.\n\n## Labels\n- database\n- performance\n- medium-priority\n\n## Milestone\nMilestone 2: Prestatie Optimalisaties",
+    "labels": ["database", "performance", "medium-priority"],
+    "milestone": "Milestone 2: Prestatie Optimalisaties"
+  },
+  {
+    "title": "Verbeter Streamlit caching",
+    "body": "## Beschrijving\nDe Streamlit app maakt meerdere database connecties en cachet niet optimaal.\n\n## Doel\n- Gebruik `@st.cache_resource` voor database connecties.\n- Voeg cache invalidatie toe na wijzigingen.\n\n## Acceptatie Criteria\n- [ ] Database connectie is gecached.\n- [ ] Cache wordt geïnvalideerd na scraping/processing.\n\n## Labels\n- performance\n- streamlit\n- medium-priority\n\n## Milestone\nMilestone 2: Prestatie Optimalisaties",
+    "labels": ["performance", "streamlit", "medium-priority"],
+    "milestone": "Milestone 2: Prestatie Optimalisaties"
+  },
+  {
+    "title": "Voeg integratietests toe",
+    "body": "## Beschrijving\nEr zijn alleen unit tests, maar geen integratietests voor de volledige workflow.\n\n## Doel\n- Voeg `test_integration.py` toe met E2E tests voor: scrape → process → generate alerts.\n- Test database interacties.\n\n## Acceptatie Criteria\n- [ ] `test_integration.py` bestaat.\n- [ ] E2E workflow wordt getest.\n- [ ] Database interacties worden getest.\n\n## Labels\n- testing\n- integration\n- medium-priority\n\n## Milestone\nMilestone 3: Testing & Kwaliteitscontrole",
+    "labels": ["testing", "integration", "medium-priority"],
+    "milestone": "Milestone 3: Testing & Kwaliteitscontrole"
+  },
+  {
+    "title": "Verbeter Ollama mocking in tests",
+    "body": "## Beschrijving\nOllama foutscenario's (bv. timeout, connection error) worden niet getest.\n\n## Doel\n- Voeg tests toe voor Ollama fouten.\n- Gebruik `conftest.py` voor gedeelde fixtures.\n\n## Acceptatie Criteria\n- [ ] Tests voor Ollama fouten bestaan.\n- [ ] `conftest.py` wordt gebruikt voor mocking.\n\n## Labels\n- testing\n- llm\n- medium-priority\n\n## Milestone\nMilestone 3: Testing & Kwaliteitscontrole",
+    "labels": ["testing", "llm", "medium-priority"],
+    "milestone": "Milestone 3: Testing & Kwaliteitscontrole"
+  },
+  {
+    "title": "Voeg tests toe voor scrape_mas.py",
+    "body": "## Beschrijving\n`scrape_mas.py` heeft minder tests dan `scrape_eba.py`.\n\n## Doel\n- Voeg tests toe voor `scrape_mas_consultations` en `scrape_mas_regulations`.\n- Zorg voor 100% testdekking.\n\n## Acceptatie Criteria\n- [ ] Tests voor alle functies in `scrape_mas.py` bestaan.\n- [ ] Testdekking is 100%.\n\n## Labels\n- testing\n- scraping\n- medium-priority\n\n## Milestone\nMilestone 3: Testing & Kwaliteitscontrole",
+    "labels": ["testing", "scraping", "medium-priority"],
+    "milestone": "Milestone 3: Testing & Kwaliteitscontrole"
+  },
+  {
+    "title": "Voeg tests toe voor app.py (Streamlit)",
+    "body": "## Beschrijving\nDe Streamlit app (`app.py`) heeft geen tests.\n\n## Doel\n- Gebruik `pytest-streamlit` om de app te testen.\n- Voeg tests toe voor de belangrijkste functies.\n\n## Acceptatie Criteria\n- [ ] `pytest-streamlit` is geïnstalleerd.\n- [ ] Tests voor `app.py` bestaan.\n\n## Labels\n- testing\n- streamlit\n- medium-priority\n\n## Milestone\nMilestone 3: Testing & Kwaliteitscontrole",
+    "labels": ["testing", "streamlit", "medium-priority"],
+    "milestone": "Milestone 3: Testing & Kwaliteitscontrole"
+  },
+  {
+    "title": "Voeg Dockerfile toe",
+    "body": "## Beschrijving\nEr is geen `Dockerfile` in de repository, alleen `docker-compose.yml`.\n\n## Doel\n- Voeg een `Dockerfile` toe met multi-stage build.\n- Gebruik `python:3.11-slim` als base image.\n\n## Acceptatie Criteria\n- [ ] `Dockerfile` bestaat.\n- [ ] Multi-stage build is geconfigureerd.\n- [ ] Image is klein en veilig.\n\n## Labels\n- docker\n- deployment\n- medium-priority\n\n## Milestone\nMilestone 4: Docker & Deployment",
+    "labels": ["docker", "deployment", "medium-priority"],
+    "milestone": "Milestone 4: Docker & Deployment"
+  },
+  {
+    "title": "Voeg health checks toe aan docker-compose.yml",
+    "body": "## Beschrijving\nDe `docker-compose.yml` heeft geen health checks voor de containers.\n\n## Doel\n- Voeg health checks toe voor `app` en `ollama`.\n- Configureer automatische herstart bij crashes.\n\n## Acceptatie Criteria\n- [ ] Health checks voor `app` en `ollama` bestaan.\n- [ ] Containers herstarten automatisch bij crashes.\n\n## Labels\n- docker\n- monitoring\n- medium-priority\n\n## Milestone\nMilestone 4: Docker & Deployment",
+    "labels": ["docker", "monitoring", "medium-priority"],
+    "milestone": "Milestone 4: Docker & Deployment"
+  },
+  {
+    "title": "Maak Ollama model data persistent",
+    "body": "## Beschrijving\nHet Ollama model (`/root/.ollama`) is niet persistent in Docker.\n\n## Doel\n- Voeg een volume toe voor Ollama data.\n- Zorg ervoor dat het model niet elke keer opnieuw gedownload hoeft te worden.\n\n## Acceptatie Criteria\n- [ ] Volume voor Ollama data bestaat.\n- [ ] Model blijft behouden na container restart.\n\n## Labels\n- docker\n- ollama\n- medium-priority\n\n## Milestone\nMilestone 4: Docker & Deployment",
+    "labels": ["docker", "ollama", "medium-priority"],
+    "milestone": "Milestone 4: Docker & Deployment"
+  },
+  {
+    "title": "Voeg backup script toe voor database",
+    "body": "## Beschrijving\nEr is geen backup mechanisme voor de SQLite database.\n\n## Doel\n- Voeg een backup script toe dat de database exporteert naar een `.tar.gz` bestand.\n- Configureer een cron job of GitHub Action voor regelmatige backups.\n\n## Acceptatie Criteria\n- [ ] Backup script bestaat.\n- [ ] Backups worden opgeslagen in `./backups/`.\n\n## Labels\n- deployment\n- database\n- medium-priority\n\n## Milestone\nMilestone 4: Docker & Deployment",
+    "labels": ["deployment", "database", "medium-priority"],
+    "milestone": "Milestone 4: Docker & Deployment"
+  },
+  {
+    "title": "Voeg URL validatie toe (SSRF preventie)",
+    "body": "## Beschrijving\nDe scrapers valideren URLs niet, wat een SSRF (Server-Side Request Forgery) risico vormt.\n\n## Doel\n- Voeg `is_valid_url()` toe in `scraping_utils.py`.\n- Gebruik een allowlist voor domeinen (bv. `eba.europa.eu`, `mas.gov.sg`).\n\n## Acceptatie Criteria\n- [ ] URL validatie bestaat.\n- [ ] Alleen vertrouwde domeinen worden gescrapt.\n\n## Labels\n- security\n- scraping\n- high-priority\n\n## Milestone\nMilestone 5: Veiligheid & Documentatie",
+    "labels": ["security", "scraping", "high-priority"],
+    "milestone": "Milestone 5: Veiligheid & Documentatie"
+  },
+  {
+    "title": "Voeg secrets management toe",
+    "body": "## Beschrijving\nGevoelige data (bv. API keys) staat hardcoded in de code of configuratie.\n\n## Doel\n- Voeg `.env.example` toe met alle benodigde variabelen.\n- Gebruik GitHub Secrets voor CI/CD.\n\n## Acceptatie Criteria\n- [ ] `.env.example` bestaat.\n- [ ] Geen secrets in de code.\n- [ ] GitHub Secrets worden gebruikt in CI/CD.\n\n## Labels\n- security\n- config\n- high-priority\n\n## Milestone\nMilestone 5: Veiligheid & Documentatie",
+    "labels": ["security", "config", "high-priority"],
+    "milestone": "Milestone 5: Veiligheid & Documentatie"
+  },
+  {
+    "title": "Voeg ARCHITECTURE.md toe",
+    "body": "## Beschrijving\nEr is geen visuele documentatie van de architectuur.\n\n## Doel\n- Voeg `ARCHITECTURE.md` toe met een Mermaid diagram.\n- Beschrijf de componenten en hun interacties.\n\n## Acceptatie Criteria\n- [ ] `ARCHITECTURE.md` bestaat.\n- [ ] Mermaid diagram is inbegrepen.\n\n## Labels\n- documentation\n- low-priority\n\n## Milestone\nMilestone 5: Veiligheid & Documentatie",
+    "labels": ["documentation", "low-priority"],
+    "milestone": "Milestone 5: Veiligheid & Documentatie"
+  },
+  {
+    "title": "Voeg CONTRIBUTING.md toe",
+    "body": "## Beschrijving\nEr is geen gids voor nieuwe contributors.\n\n## Doel\n- Voeg `CONTRIBUTING.md` toe met stappen voor bijdragen.\n- Beschrijf code stijl, testing, en PR template.\n\n## Acceptatie Criteria\n- [ ] `CONTRIBUTING.md` bestaat.\n- [ ] Stappen voor bijdragen zijn duidelijk.\n\n## Labels\n- documentation\n- low-priority\n\n## Milestone\nMilestone 5: Veiligheid & Documentatie",
+    "labels": ["documentation", "low-priority"],
+    "milestone": "Milestone 5: Veiligheid & Documentatie"
+  }
+]

@@ -24,6 +24,8 @@ services:
       - PROCESSED_DIR=/app/data/processed
       - LOGS_DIR=/app/logs
       - DB_PATH=/app/data/processed/regulatory_updates.db
+      - PYTHONUNBUFFERED=1
+    user: "1000:1000"  # Run as non-root user to match Dockerfile
     depends_on:
       - ollama
     restart: unless-stopped
@@ -46,6 +48,7 @@ services:
   ollama-setup:
     image: ollama/ollama:latest
     container_name: ollama-setup
+    user: "1000:1000"  # Match non-root user
     depends_on:
       - ollama
     entrypoint: ["/bin/sh", "-c"]

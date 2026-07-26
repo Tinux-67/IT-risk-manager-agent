@@ -38,21 +38,21 @@ COPY --chown=appuser:appuser . .
 RUN mkdir -p /app/data/raw/eba /app/data/raw/mas /app/data/processed /app/logs && \
     chown -R appuser:appuser /app/data /app/logs
 
-# Set environment variables
-ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1 \
-    PIP_NO_CACHE_DIR=1 \
-    OLLAMA_HOST=http://ollama:11434 \
-    OLLAMA_MODEL=mistral \
-    LOG_LEVEL=INFO \
-    LOG_ROTATION=1 day \
-    LOG_RETENTION=7 days \
-    DEFAULT_DELAY=1.0 \
-    DATA_DIR=/app/data \
-    RAW_DATA_DIR=/app/data/raw \
-    PROCESSED_DIR=/app/data/processed \
-    LOGS_DIR=/app/logs \
-    DB_PATH=/app/data/processed/regulatory_updates.db
+# Set environment variables (each on separate line to avoid syntax errors)
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PIP_NO_CACHE_DIR=1
+ENV OLLAMA_HOST=http://ollama:11434
+ENV OLLAMA_MODEL=mistral
+ENV LOG_LEVEL=INFO
+ENV LOG_ROTATION="1 day"
+ENV LOG_RETENTION="7 days"
+ENV DEFAULT_DELAY=1.0
+ENV DATA_DIR=/app/data
+ENV RAW_DATA_DIR=/app/data/raw
+ENV PROCESSED_DIR=/app/data/processed
+ENV LOGS_DIR=/app/logs
+ENV DB_PATH=/app/data/processed/regulatory_updates.db
 
 # Switch to non-root user
 USER appuser

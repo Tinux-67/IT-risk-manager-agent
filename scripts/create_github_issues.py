@@ -16,7 +16,7 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 
 import requests
 
@@ -55,7 +55,7 @@ class GitHubIssuesCreator:
         endpoint: str,
         data: Optional[Dict] = None,
         params: Optional[Dict] = None,
-    ) -> Optional[Dict]:
+    ) -> Optional[Union[Dict, List[Dict]]]:
         """
         Make a request to the GitHub API.
 
@@ -74,7 +74,14 @@ class GitHubIssuesCreator:
                 print(f"[DRY RUN] {method} {url}")
                 if data:
                     print(f"  Data: {json.dumps(data, indent=2)}")
-                return {"id": 0, "number": 0}  # Mock response for dry run
+                # Return mock data for dry run
+                if endpoint.endswith("/labels"):
+                    return []  # Return empty list for labels in dry run
+                elif endpoint.endswith("/milestones"):
+                    return []  # Return empty list for milestones in dry run
+                elif "/issues" in endpoint and method == "POST":
+                    return {"id": 0, "number": 0, "node_id": ""}  # Mock issue
+                return {"id": 0, "node_id": ""}
 
             response = self.session.request(
                 method,
@@ -118,12 +125,22 @@ class GitHubIssuesCreator:
         # List existing labels
         endpoint = f"/repos/{self.repo}/labels"
         response = self._api_request("GET", endpoint)
+        
+        # Handle case where response is not a list (e.g., string or None)
         if response is None:
+            return None
+        if isinstance(response, str):
+            print(f"⚠️ Unexpected response type for labels: {type(response)}")
+            return None
+        
+        # Ensure response is a list
+        if not isinstance(response, list):
+            print(f"⚠️ Unexpected response format for labels")
             return None
 
         # Check if label exists
         for label in response:
-            if label["name"] == label_name:
+            if isinstance(label, dict) and label.get("name") == label_name:
                 return label
 
         # Create new label
@@ -148,12 +165,20 @@ class GitHubIssuesCreator:
         """
         endpoint = f"/repos/{self.repo}/milestones"
         response = self._api_request("GET", endpoint, params={"state": "all"})
+        
+        # Handle case where response is not a list
         if response is None:
+            return None
+        if isinstance(response, str):
+            print(f"⚠️ Unexpected response type for milestones: {type(response)}")
+            return None
+        if not isinstance(response, list):
+            print(f"⚠️ Unexpected response format for milestones")
             return None
 
         # Check if milestone exists
         for milestone in response:
-            if milestone["title"] == title:
+            if isinstance(milestone, dict) and milestone.get("title") == title:
                 return milestone
 
         # Create new milestone
@@ -189,14 +214,14 @@ class GitHubIssuesCreator:
         label_objects = []
         for label_name in labels:
             label = self.get_or_create_label(label_name)
-            if label:
+            if label and isinstance(label, dict):
                 label_objects.append(label["name"])
 
         # Get or create milestone
         milestone_number = None
         if milestone_title:
             milestone = self.get_or_create_milestone(milestone_title)
-            if milestone:
+            if milestone and isinstance(milestone, dict):
                 milestone_number = milestone.get("number")
 
         # Create issue data
@@ -212,7 +237,7 @@ class GitHubIssuesCreator:
         endpoint = f"/repos/{self.repo}/issues"
         issue = self._api_request("POST", endpoint, data=issue_data)
 
-        if issue:
+        if issue and isinstance(issue, dict):
             print(f"✅ Created issue: #{issue.get('number')} - {title}")
             self.created_issues.append(issue)
         else:
@@ -241,13 +266,18 @@ class GitHubIssuesCreator:
         # Get project columns
         endpoint = f"/projects/{project_id}/columns"
         columns = self._api_request("GET", endpoint)
+        
+        # Handle response
         if columns is None:
+            return False
+        if not isinstance(columns, list):
+            print(f"⚠️ Unexpected response format for project columns")
             return False
 
         # Find the column by name
         target_column = None
         for column in columns:
-            if column["name"] == column_name:
+            if isinstance(column, dict) and column.get("name") == column_name:
                 target_column = column
                 break
 
@@ -258,7 +288,7 @@ class GitHubIssuesCreator:
         # Get the issue node ID
         issue_endpoint = f"/repos/{self.repo}/issues/{issue_number}"
         issue = self._api_request("GET", issue_endpoint, params={"fields": "id"})
-        if issue is None:
+        if issue is None or not isinstance(issue, dict):
             return False
 
         # Add issue to column using GraphQL (more reliable for projects)
@@ -280,8 +310,8 @@ class GitHubIssuesCreator:
 
         variables = {
             "projectId": project_id,
-            "contentId": issue["node_id"],
-            "columnId": target_column["node_id"],
+            "contentId": issue.get("node_id"),
+            "columnId": target_column.get("node_id"),
         }
 
         response = self._api_request(
@@ -290,7 +320,7 @@ class GitHubIssuesCreator:
             data={"query": graphql_query, "variables": variables},
         )
 
-        if response and "errors" not in response:
+        if response and isinstance(response, dict) and "errors" not in response:
             print(f"✅ Added issue #{issue_number} to project column '{column_name}'")
             return True
         else:
@@ -310,12 +340,17 @@ class GitHubIssuesCreator:
         # Get all projects for the repository
         endpoint = f"/repos/{self.repo}/projects"
         response = self._api_request("GET", endpoint, params={"state": "all"})
+        
+        # Handle response
         if response is None:
+            return None
+        if not isinstance(response, list):
+            print(f"⚠️ Unexpected response format for projects")
             return None
 
         for project in response:
-            if project["name"] == project_name:
-                return project["id"]
+            if isinstance(project, dict) and project.get("name") == project_name:
+                return project.get("id")
 
         return None
 
@@ -376,11 +411,12 @@ class GitHubIssuesCreator:
         if self.created_issues:
             print(f"\n📋 Adding issues to project board...")
             for issue in self.created_issues:
-                self.add_issue_to_project(
-                    issue_number=issue["number"],
-                    project_id=project_id,
-                    column_name=column_name,
-                )
+                if isinstance(issue, dict):
+                    self.add_issue_to_project(
+                        issue_number=issue.get("number", 0),
+                        project_id=project_id,
+                        column_name=column_name,
+                    )
 
 
 def main():

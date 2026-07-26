@@ -37,7 +37,18 @@ COPY --chown=appuser:appuser . .
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    PIP_NO_CACHE_DIR=1
+    PIP_NO_CACHE_DIR=1 \
+    OLLAMA_HOST=http://ollama:11434 \
+    OLLAMA_MODEL=mistral \
+    LOG_LEVEL=INFO \
+    LOG_ROTATION=1 day \
+    LOG_RETENTION=7 days \
+    DEFAULT_DELAY=1.0 \
+    DATA_DIR=/app/data \
+    RAW_DATA_DIR=/app/data/raw \
+    PROCESSED_DIR=/app/data/processed \
+    LOGS_DIR=/app/logs \
+    DB_PATH=/app/data/processed/regulatory_updates.db
 
 # Switch to non-root user
 USER appuser

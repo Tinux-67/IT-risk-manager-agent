@@ -14,6 +14,16 @@ services:
       - ./logs:/app/logs
     environment:
       - OLLAMA_HOST=http://ollama:11434
+      - OLLAMA_MODEL=mistral
+      - LOG_LEVEL=INFO
+      - LOG_ROTATION=1 day
+      - LOG_RETENTION=7 days
+      - DEFAULT_DELAY=1.0
+      - DATA_DIR=/app/data
+      - RAW_DATA_DIR=/app/data/raw
+      - PROCESSED_DIR=/app/data/processed
+      - LOGS_DIR=/app/logs
+      - DB_PATH=/app/data/processed/regulatory_updates.db
     depends_on:
       - ollama
     restart: unless-stopped

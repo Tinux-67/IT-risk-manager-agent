@@ -3,18 +3,20 @@ Tests for generate_alerts.py module.
 """
 
 import sqlite3
-import pytest
-from unittest.mock import patch, MagicMock
-from pathlib import Path
-from datetime import datetime, timedelta
 
 # Add parent directory to path for imports
 import sys
+from datetime import datetime, timedelta
+from pathlib import Path
+from unittest.mock import patch
+
+import pytest
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from scripts.generate_alerts import (
-    get_updates_since_days,
     format_alert,
+    get_updates_since_days,
 )
 
 
@@ -43,7 +45,6 @@ def temp_db_with_data():
 
     # Insert sample data with dates that are guaranteed to be within the test range
     # Use dates relative to today to avoid time-sensitive test failures
-    today = datetime.now().strftime("%Y-%m-%d")
     one_day_ago = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
     five_days_ago = (datetime.now() - timedelta(days=5)).strftime("%Y-%m-%d")
     ten_days_ago = (datetime.now() - timedelta(days=10)).strftime("%Y-%m-%d")
@@ -85,22 +86,25 @@ def temp_db_with_data():
     ]
 
     for update in sample_updates:
-        cursor.execute("""
+        cursor.execute(
+            """
             INSERT INTO updates (
-                title, source_url, file_path, publication_date, 
+                title, source_url, file_path, publication_date,
                 raw_text, summary, risk_area, urgency_level, is_processed
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            update["title"],
-            update["source_url"],
-            update["file_path"],
-            update["publication_date"],
-            update["raw_text"],
-            update["summary"],
-            update["risk_area"],
-            update["urgency_level"],
-            update["is_processed"],
-        ))
+        """,
+            (
+                update["title"],
+                update["source_url"],
+                update["file_path"],
+                update["publication_date"],
+                update["raw_text"],
+                update["summary"],
+                update["risk_area"],
+                update["urgency_level"],
+                update["is_processed"],
+            ),
+        )
 
     conn.commit()
     yield conn
@@ -134,10 +138,10 @@ class TestFormatAlert:
         """Test formatting a workfloor alert with LLM."""
         cursor = temp_db_with_data.cursor()
         cursor.execute("SELECT * FROM updates WHERE title = 'Test Update 1'")
-        update = dict(zip([col[0] for col in cursor.description], cursor.fetchone()))
+        update = dict(zip([col[0] for col in cursor.description], cursor.fetchone(), strict=True))
 
-        with patch('scripts.generate_alerts.generate_llm_summary') as mock_summary:
-            with patch('scripts.generate_alerts.generate_llm_key_takeaways') as mock_takeaways:
+        with patch("scripts.generate_alerts.generate_llm_summary") as mock_summary:
+            with patch("scripts.generate_alerts.generate_llm_key_takeaways") as mock_takeaways:
                 mock_summary.return_value = "Test summary"
                 mock_takeaways.return_value = "- Takeaway 1\n- Takeaway 2"
 
@@ -153,10 +157,10 @@ class TestFormatAlert:
         """Test formatting a management alert with LLM."""
         cursor = temp_db_with_data.cursor()
         cursor.execute("SELECT * FROM updates WHERE title = 'Test Update 2'")
-        update = dict(zip([col[0] for col in cursor.description], cursor.fetchone()))
+        update = dict(zip([col[0] for col in cursor.description], cursor.fetchone(), strict=True))
 
-        with patch('scripts.generate_alerts.generate_llm_business_impact') as mock_impact:
-            with patch('scripts.generate_alerts.generate_llm_risk_assessment') as mock_risk:
+        with patch("scripts.generate_alerts.generate_llm_business_impact") as mock_impact:
+            with patch("scripts.generate_alerts.generate_llm_risk_assessment") as mock_risk:
                 mock_impact.return_value = "- Impact 1"
                 mock_risk.return_value = "- **Risk Level**: Urgent"
 
@@ -171,11 +175,15 @@ class TestFormatAlert:
         """Test formatting a C-level alert with LLM."""
         cursor = temp_db_with_data.cursor()
         cursor.execute("SELECT * FROM updates WHERE title = 'Test Update 1'")
-        update = dict(zip([col[0] for col in cursor.description], cursor.fetchone()))
+        update = dict(zip([col[0] for col in cursor.description], cursor.fetchone(), strict=True))
 
-        with patch('scripts.generate_alerts.generate_llm_executive_summary') as mock_summary:
-            with patch('scripts.generate_alerts.generate_llm_strategic_implications') as mock_implications:
-                with patch('scripts.generate_alerts.generate_llm_long_term_outlook') as mock_outlook:
+        with patch("scripts.generate_alerts.generate_llm_executive_summary") as mock_summary:
+            with patch(
+                "scripts.generate_alerts.generate_llm_strategic_implications"
+            ) as mock_implications:
+                with patch(
+                    "scripts.generate_alerts.generate_llm_long_term_outlook"
+                ) as mock_outlook:
                     mock_summary.return_value = "Executive summary"
                     mock_implications.return_value = "- Implication 1"
                     mock_outlook.return_value = "Long-term outlook"
@@ -190,7 +198,7 @@ class TestFormatAlert:
         """Test formatting a workfloor alert without LLM."""
         cursor = temp_db_with_data.cursor()
         cursor.execute("SELECT * FROM updates WHERE title = 'Test Update 1'")
-        update = dict(zip([col[0] for col in cursor.description], cursor.fetchone()))
+        update = dict(zip([col[0] for col in cursor.description], cursor.fetchone(), strict=True))
 
         alert = format_alert(update, "workfloor", use_llm=False)
 

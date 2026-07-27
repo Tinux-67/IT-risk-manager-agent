@@ -6,10 +6,8 @@ Shared between scrape_eba.py and scrape_mas.py to avoid code duplication.
 
 import os
 import re
-import time
 from datetime import datetime
-from typing import Dict, List, Optional, Union
-from urllib.parse import urljoin, urlencode, unquote
+from urllib.parse import unquote, urlencode, urljoin
 
 import requests
 from bs4 import BeautifulSoup
@@ -30,29 +28,31 @@ logger.add(
 def get_session() -> requests.Session:
     """
     Create a requests session with headers to mimic a browser.
-    
+
     Returns:
         requests.Session: Configured session with user-agent and headers.
     """
     session = requests.Session()
-    session.headers.update({
-        "User-Agent": Config.USER_AGENT,
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.5",
-        "Accept-Encoding": "gzip, deflate, br",
-        "Connection": "keep-alive",
-        "DNT": "1",
-    })
+    session.headers.update(
+        {
+            "User-Agent": Config.USER_AGENT,
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.5",
+            "Accept-Encoding": "gzip, deflate, br",
+            "Connection": "keep-alive",
+            "DNT": "1",
+        }
+    )
     return session
 
 
 def sanitize_filename(filename: str) -> str:
     """
     Sanitize filename by removing invalid characters and URL-encoded sequences.
-    
+
     Args:
         filename: The original filename (may contain URL-encoded characters).
-        
+
     Returns:
         str: Sanitized filename safe for filesystem use.
     """
@@ -61,22 +61,22 @@ def sanitize_filename(filename: str) -> str:
     # Remove invalid characters for filesystem
     filename = re.sub(r'[\\/*?:"<>|]', "_", filename)
     # Replace multiple spaces with single space
-    filename = re.sub(r'\s+', " ", filename).strip()
+    filename = re.sub(r"\s+", " ", filename).strip()
     return filename
 
 
 def extract_date_from_url(url: str) -> str:
     """
     Extract date from URL path (e.g., /2024-01/... -> 2024-01 or /2024/01/... -> 2024-01).
-    
+
     Args:
         url: The URL to extract date from.
-        
+
     Returns:
         str: Extracted date in YYYY-MM format, or "Unknown" if not found.
     """
     # Look for YYYY-MM or YYYY/MM pattern in the URL
-    match = re.search(r'/(\d{4})[-/](\d{2})', url)
+    match = re.search(r"/(\d{4})[-/](\d{2})", url)
     if match:
         year, month = match.groups()
         return f"{year}-{month}"
@@ -87,20 +87,20 @@ def extract_date_from_filename(filename: str) -> str:
     """
     Extract date from filename (e.g., '2024-01-15_Document.pdf' -> 2024-01-15).
     Supports YYYY-MM-DD, YYYY/MM/DD, YYYYMMDD, and space-separated formats.
-    
+
     Args:
         filename: The filename to extract date from.
-        
+
     Returns:
         str: Extracted date in YYYY-MM-DD format, or "Unknown" if not found.
     """
     # Look for YYYY-MM-DD, YYYY/MM/DD, YYYYMMDD, or YYYY MM DD pattern
-    match = re.search(r'(\d{4})[-/_\s](\d{2})[-/_\s](\d{2})', filename)
+    match = re.search(r"(\d{4})[-/_\s](\d{2})[-/_\s](\d{2})", filename)
     if match:
         year, month, day = match.groups()
         return f"{year}-{month}-{day}"
     # Look for YYYY-MM or YYYYMMDD pattern
-    match = re.search(r'(\d{4})[-_](\d{2})', filename)
+    match = re.search(r"(\d{4})[-_](\d{2})", filename)
     if match:
         year, month = match.groups()
         return f"{year}-{month}"
@@ -110,18 +110,18 @@ def extract_date_from_filename(filename: str) -> str:
 def download_file(
     url: str,
     save_path: str,
-    session: Optional[requests.Session] = None,
+    session: requests.Session | None = None,
     timeout: int = 30,
 ) -> bool:
     """
     Download a file from a URL and save it to the specified path.
-    
+
     Args:
         url: URL of the file to download.
         save_path: Local path to save the file.
         session: Optional requests.Session for connection reuse.
         timeout: Request timeout in seconds (default: 30).
-        
+
     Returns:
         bool: True if download succeeded, False otherwise.
     """
@@ -155,14 +155,14 @@ def download_file(
         return False
 
 
-def build_url(base_url: str, params: Optional[Dict] = None) -> str:
+def build_url(base_url: str, params: dict | None = None) -> str:
     """
     Build a URL with query parameters.
-    
+
     Args:
         base_url: The base URL (e.g., "https://example.com/path").
         params: Dictionary of query parameters (default: None).
-        
+
     Returns:
         str: Full URL with query parameters (omits '?' if params is empty or None).
     """
@@ -174,10 +174,10 @@ def build_url(base_url: str, params: Optional[Dict] = None) -> str:
 def get_file_extension(url: str) -> str:
     """
     Determine the file extension from a URL.
-    
+
     Args:
         url: The URL of the file.
-        
+
     Returns:
         str: File extension (e.g., ".pdf", ".html", ".bin" for unknown).
     """
@@ -198,17 +198,17 @@ def generate_filename(
     title: str,
     source: str,
     extension: str = ".pdf",
-    timestamp: Optional[str] = None,
+    timestamp: str | None = None,
 ) -> str:
     """
     Generate a sanitized filename for a downloaded file.
-    
+
     Args:
         title: The title of the document.
         source: The source (e.g., "EBA", "MAS").
         extension: File extension (default: ".pdf").
         timestamp: Optional timestamp (default: current time in YYYYMMDD_HHMMSS format).
-        
+
     Returns:
         str: Sanitized filename.
     """
@@ -224,22 +224,22 @@ def generate_filename(
 def save_raw_update(
     update: dict,
     base_dir: str,
-    session: Optional[requests.Session] = None,
+    session: requests.Session | None = None,
 ) -> str:
     """
     Save a raw update (PDF/HTML/DOCX) to the specified directory.
-    
+
     Args:
         update: Dictionary with 'title', 'url', 'date', and optionally 'source'.
         base_dir: Base directory to save the file (e.g., Config.RAW_DATA_DIR).
         session: Optional requests.Session for connection reuse.
-        
+
     Returns:
         str: Path to the saved file, or empty string if failed.
     """
     # Determine file extension from URL
     extension = get_file_extension(update["url"])
-    
+
     # Generate filename
     source = update.get("source", "unknown")
     filename = generate_filename(update["title"], source, extension)
@@ -256,18 +256,18 @@ def save_raw_update(
 def find_links(
     soup: BeautifulSoup,
     base_url: str,
-    link_selectors: Optional[list] = None,
-    text_selectors: Optional[list] = None,
+    link_selectors: list | None = None,
+    text_selectors: list | None = None,
 ) -> list[dict]:
     """
     Find and extract links from a BeautifulSoup object with optional filtering.
-    
+
     Args:
         soup: BeautifulSoup parsed HTML.
         base_url: Base URL to join with relative links.
         link_selectors: List of CSS selectors to filter links (default: ["a[href]"]).
         text_selectors: List of CSS selectors to extract text from parent elements.
-        
+
     Returns:
         list[dict]: List of dictionaries with 'title', 'url', 'date', and 'source'.
     """
@@ -323,10 +323,12 @@ def find_links(
             if date == "Unknown":
                 date = extract_date_from_filename(href)
 
-            updates.append({
-                "title": title,
-                "url": full_url,
-                "date": date,
-            })
+            updates.append(
+                {
+                    "title": title,
+                    "url": full_url,
+                    "date": date,
+                }
+            )
 
     return updates

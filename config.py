@@ -6,7 +6,6 @@ Uses environment variables for flexible configuration.
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional
 
 from dotenv import load_dotenv
 
@@ -42,14 +41,16 @@ class Config:
 
     # --- Scraping Settings ---
     DEFAULT_DELAY: float = float(os.getenv("DEFAULT_DELAY", "1.0"))  # seconds between requests
-    USER_AGENT: str = os.getenv("USER_AGENT", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+    USER_AGENT: str = os.getenv(
+        "USER_AGENT", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+    )
 
     # --- Ollama ---
     OLLAMA_MODEL: str = os.getenv("OLLAMA_MODEL", "mistral")
     OLLAMA_HOST: str = os.getenv("OLLAMA_HOST", "http://localhost:11434")
 
     # --- Risk Areas ---
-    RISK_AREAS: List[str] = [
+    RISK_AREAS: list[str] = [
         "IT Risk Management",
         "Cybersecurity",
         "AI Risk",
@@ -69,7 +70,7 @@ class Config:
     ]
 
     # --- Sources ---
-    SOURCES: List[str] = ["EBA", "MAS"]
+    SOURCES: list[str] = ["EBA", "MAS"]
 
     # --- Logging ---
     LOG_ROTATION: str = os.getenv("LOG_ROTATION", "1 day")
@@ -80,7 +81,7 @@ class Config:
     def get_log_file(cls) -> Path:
         """
         Generate a dynamic log filename with current timestamp.
-        
+
         Returns:
             Path: Full path to the log file (e.g., logs/app_2026-07-26.log)
         """

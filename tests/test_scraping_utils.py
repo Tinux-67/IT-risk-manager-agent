@@ -2,31 +2,29 @@
 Tests for scraping_utils.py module.
 """
 
-import os
-import pytest
-import requests
-from unittest.mock import patch, MagicMock, mock_open
-from pathlib import Path
-from datetime import datetime
-from bs4 import BeautifulSoup
-
 # Add parent directory to path for imports
 import sys
+from pathlib import Path
+from unittest.mock import MagicMock, patch
+
+import requests
+from bs4 import BeautifulSoup
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from config import Config
 from scripts.scraping_utils import (
+    build_url,
+    download_file,
+    extract_date_from_filename,
+    extract_date_from_url,
+    find_links,
+    generate_filename,
+    get_file_extension,
     get_session,
     sanitize_filename,
-    extract_date_from_url,
-    extract_date_from_filename,
-    download_file,
-    build_url,
-    get_file_extension,
-    generate_filename,
     save_raw_update,
-    find_links,
 )
-from config import Config
 
 
 class TestGetSession:
@@ -53,7 +51,7 @@ class TestSanitizeFilename:
         """Test filename with special characters."""
         assert sanitize_filename("Test/File:Name.pdf") == "Test_File_Name.pdf"
         assert sanitize_filename("Doc*Name?.txt") == "Doc_Name_.txt"
-        assert sanitize_filename("A|B<C>D\"E") == "A_B_C_D_E"
+        assert sanitize_filename('A|B<C>D"E') == "A_B_C_D_E"
 
     def test_sanitize_filename_with_url_encoded(self):
         """Test filename with URL-encoded characters."""
@@ -309,7 +307,9 @@ class TestDownloadFile:
     def test_download_file_connection_error(self, mock_get):
         """Test connection error during download."""
         mock_response = MagicMock()
-        mock_response.raise_for_status.side_effect = requests.exceptions.ConnectionError("Connection Error")
+        mock_response.raise_for_status.side_effect = requests.exceptions.ConnectionError(
+            "Connection Error"
+        )
         mock_get.return_value = mock_response
 
         result = download_file("http://example.com/test.pdf", "/tmp/test.pdf")
@@ -412,11 +412,7 @@ class TestFindLinks:
         """
         soup = BeautifulSoup(html, "html.parser")
 
-        links = find_links(
-            soup, 
-            "https://example.com",
-            text_selectors=[".date"]
-        )
+        links = find_links(soup, "https://example.com", text_selectors=[".date"])
 
         assert len(links) == 1
         assert links[0]["date"] == "2024-01-01"

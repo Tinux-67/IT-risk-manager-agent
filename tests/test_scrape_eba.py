@@ -2,23 +2,21 @@
 Tests for scrape_eba.py module.
 """
 
-import os
-import pytest
-from unittest.mock import patch, MagicMock
-from pathlib import Path
-
 # Add parent directory to path for imports
 import sys
+from pathlib import Path
+from unittest.mock import MagicMock, patch
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from scripts.scraping_utils import (
-    sanitize_filename,
-    extract_date_from_url,
-    extract_date_from_filename,
-    build_url,
-    get_session,
-)
 from config import Config
+from scripts.scraping_utils import (
+    build_url,
+    extract_date_from_filename,
+    extract_date_from_url,
+    get_session,
+    sanitize_filename,
+)
 
 
 class TestSanitizeFilename:
@@ -133,6 +131,7 @@ class TestScrapeEbaRegulations:
         mock_soup.return_value = mock_soup_instance
 
         from scripts.scrape_eba import scrape_eba_regulations
+
         updates = scrape_eba_regulations()
 
         assert len(updates) == 1
@@ -147,6 +146,7 @@ class TestScrapeEbaRegulations:
         mock_get.return_value = mock_response
 
         from scripts.scrape_eba import scrape_eba_regulations
+
         updates = scrape_eba_regulations()
 
         assert len(updates) == 0
@@ -168,6 +168,7 @@ class TestDownloadFile:
         mock_open.return_value.__enter__.return_value = mock_file
 
         from scripts.scraping_utils import download_file
+
         result = download_file("http://example.com/test.pdf", "/tmp/test.pdf")
 
         assert result is True
@@ -181,6 +182,7 @@ class TestDownloadFile:
         mock_get.return_value = mock_response
 
         from scripts.scraping_utils import download_file
+
         result = download_file("http://example.com/test.pdf", "/tmp/test.pdf")
 
         assert result is False
@@ -197,6 +199,7 @@ class TestSaveRawUpdate:
         mock_datetime.now.return_value.strftime.return_value = "20240101_120000"
 
         from scripts.scraping_utils import save_raw_update
+
         update = {
             "title": "Test Document",
             "url": "http://example.com/test.pdf",
@@ -217,6 +220,7 @@ class TestSaveRawUpdate:
         mock_download.return_value = False
 
         from scripts.scraping_utils import save_raw_update
+
         update = {
             "title": "Test Document",
             "url": "http://example.com/test.pdf",

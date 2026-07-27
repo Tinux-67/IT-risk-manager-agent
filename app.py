@@ -9,7 +9,6 @@ import sqlite3
 import subprocess
 import sys
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Tuple
 
 import streamlit as st
 from loguru import logger
@@ -33,12 +32,14 @@ SCRIPTS_DIR = "scripts"
 
 # Page configuration
 st.set_page_config(
-    page_title="IT Risk Manager Agent",    layout="wide",
+    page_title="IT Risk Manager Agent",
+    layout="wide",
     initial_sidebar_state="expanded",
 )
 
 # Custom CSS for better styling
-st.markdown("""
+st.markdown(
+    """
     <style>
     .main-header {
         font-size: 2.5rem;
@@ -72,7 +73,9 @@ st.markdown("""
         margin-right: 0.5rem;
     }
     </style>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
 
 
 def get_db_connection() -> sqlite3.Connection:
@@ -85,7 +88,7 @@ def get_db_connection() -> sqlite3.Connection:
     return sqlite3.connect(DB_PATH)
 
 
-def run_script(script_name: str, args: List[str] = None) -> Tuple[bool, str]:
+def run_script(script_name: str, args: list[str] | None = None) -> tuple[bool, str]:
     """Run a Python script and return (success, output)."""
     if args is None:
         args = []
@@ -98,7 +101,7 @@ def run_script(script_name: str, args: List[str] = None) -> Tuple[bool, str]:
     try:
         logger.info(f"Running script: {script_name} with args: {args}")
         cmd = [sys.executable, script_path] + args
-        result = subprocess.run(
+        result = subprocess.run(  # noqa: S603
             cmd,
             capture_output=True,
             text=True,
@@ -119,10 +122,17 @@ def run_script(script_name: str, args: List[str] = None) -> Tuple[bool, str]:
 
 
 @st.cache_data(ttl=300)  # Cache for 5 minutes
-def get_updates(_conn: sqlite3.Connection, days: int = 365, risk_area: str = None, urgency: str = None) -> List[Dict]:
+def get_updates(
+    _conn: sqlite3.Connection,
+    days: int = 365,
+    risk_area: str | None = None,
+    urgency: str | None = None,
+) -> list[dict]:
     """Get updates from the database with optional filters."""
-    logger.debug(f"Getting updates with filters: days={days}, risk_area={risk_area}, urgency={urgency}")
-    cursor = conn.cursor()
+    logger.debug(
+        f"Getting updates with filters: days={days}, risk_area={risk_area}, urgency={urgency}"
+    )
+    cursor = _conn.cursor()
 
     query = """
         SELECT id, title, publication_date, risk_area, urgency_level, raw_text, file_path, summary
@@ -148,31 +158,31 @@ def get_updates(_conn: sqlite3.Connection, days: int = 365, risk_area: str = Non
 
     cursor.execute(query, params)
     columns = [col[0] for col in cursor.description]
-    updates = [dict(zip(columns, row)) for row in cursor.fetchall()]
+    updates = [dict(zip(columns, row, strict=True)) for row in cursor.fetchall()]
 
     logger.debug(f"Found {len(updates)} updates matching criteria")
     return updates
 
 
 @st.cache_data(ttl=300)
-    def get_risk_areas(_conn: sqlite3.Connection) -> List[str]:
+def get_risk_areas(_conn: sqlite3.Connection) -> list[str]:
     """Get all unique risk areas from the database."""
     logger.debug("Getting unique risk areas from database")
-    cursor = conn.cursor()
+    cursor = _conn.cursor()
     cursor.execute("SELECT DISTINCT risk_area FROM updates WHERE risk_area IS NOT NULL")
     return [row[0] for row in cursor.fetchall() if row[0]]
 
 
 @st.cache_data(ttl=300)
-    def get_urgency_levels(_conn: sqlite3.Connection) -> List[str]:
+def get_urgency_levels(_conn: sqlite3.Connection) -> list[str]:
     """Get all unique urgency levels from the database."""
     logger.debug("Getting unique urgency levels from database")
-    cursor = conn.cursor()
+    cursor = _conn.cursor()
     cursor.execute("SELECT DISTINCT urgency_level FROM updates WHERE urgency_level IS NOT NULL")
     return [row[0] for row in cursor.fetchall() if row[0]]
 
 
-def display_update_card(update: Dict):
+def display_update_card(update: dict) -> None:
     """Display a single update as a card."""
     urgency_class = {
         "Urgent": "urgent",
@@ -181,30 +191,36 @@ def display_update_card(update: Dict):
         "Low": "low",
     }.get(update["urgency_level"], "medium")
 
-    with st.expander(f"📄 {update['title']}", expanded=False):
+    with st.expander(f"\ud83d\udcc4 {update['title']}", expanded=False):
         col1, col2 = st.columns([3, 1])
 
         with col1:
-            st.markdown(f"**📅 Date:** {update['publication_date']}")
-            st.markdown(f"**🏷️ Risk Area:** <span class='risk-area-tag'>{update['risk_area']}</span>", unsafe_allow_html=True)
-            st.markdown(f"**⚠️ Urgency:** <span class='urgency-badge {urgency_class}'>{update['urgency_level']}</span>", unsafe_allow_html=True)
-            st.markdown(f"**📁 File:** `{update['file_path']}`")
+            st.markdown(f"**\ud83d\udcc5 Date:** {update['publication_date']}")
+            st.markdown(
+                f"**\ud83c\udff7\ufe0f Risk Area:** <span class='risk-area-tag'>{update['risk_area']}</span>",
+                unsafe_allow_html=True,
+            )
+            st.markdown(
+                f"**\u26a0\ufe0f Urgency:** <span class='urgency-badge {urgency_class}'>{update['urgency_level']}</span>",
+                unsafe_allow_html=True,
+            )
+            st.markdown(f"**\ud83d\udcc1 File:** `{update['file_path']}`")
 
         with col2:
-            if st.button("🔍 View Details", key=f"view_{update['id']}"):
+            if st.button("\ud83d\udd0d View Details", key=f"view_{update['id']}"):
                 st.session_state["selected_update"] = update
                 st.session_state["page"] = "Detail View"
                 st.rerun()
 
         if update.get("summary"):
-            st.markdown("**📝 Summary:**")
+            st.markdown("**\ud83d\udcdd Summary:**")
             st.markdown(update["summary"])
 
 
-def display_update_detail(update: Dict):
+def display_update_detail(update: dict) -> None:
     """Display detailed view of a single update."""
     logger.debug(f"Displaying details for update: {update['title']}")
-    st.markdown("## 📄 Update Details")
+    st.markdown("## \ud83d\udcc4 Update Details")
 
     col1, col2 = st.columns([2, 1])
 
@@ -216,7 +232,7 @@ def display_update_detail(update: Dict):
         st.markdown(f"**File Path:** `{update['file_path']}`")
 
     with col2:
-        if st.button("⬅ Back to Overview"):
+        if st.button("\u2b05 Back to Overview"):
             st.session_state.pop("selected_update", None)
             st.session_state["page"] = "Overview"
             st.rerun()
@@ -224,7 +240,7 @@ def display_update_detail(update: Dict):
     st.markdown("---")
 
     # Display raw text
-    st.markdown("### 📝 Full Text")
+    st.markdown("### \ud83d\udcdd Full Text")
     if update.get("raw_text"):
         st.text_area("", update["raw_text"], height=300, key=f"text_{update['id']}")
     else:
@@ -232,14 +248,14 @@ def display_update_detail(update: Dict):
 
     # Display summary
     if update.get("summary"):
-        st.markdown("### 📌 Summary")
+        st.markdown("### \ud83d\udccc Summary")
         st.markdown(update["summary"])
 
 
-def display_alert_generator():
+def display_alert_generator() -> None:
     """Display the alert generator interface."""
     logger.debug("Displaying alert generator interface")
-    st.markdown("## 🚨 Alert Generator")
+    st.markdown("## \ud83d\udea8 Alert Generator")
 
     conn = get_db_connection()
 
@@ -251,7 +267,7 @@ def display_alert_generator():
     with col3:
         use_llm = st.checkbox("Use LLM (Ollama)", value=True)
 
-    if st.button("🔄 Generate Alerts"):
+    if st.button("\ud83d\udd04 Generate Alerts"):
         with st.spinner("Generating alerts..."):
             # Get updates
             updates = get_updates(conn, days=days)
@@ -270,37 +286,51 @@ def display_alert_generator():
                     if use_llm:
                         try:
                             from scripts.generate_alerts import format_alert
+
                             alert = format_alert(update, audience, use_llm=True)
                             st.markdown(alert)
                         except Exception as e:
                             logger.error(f"Error generating LLM alert: {e}")
                             st.error(f"Error generating LLM alert: {e}")
-                            st.markdown(f"**Title:** {update['title']}\n**Date:** {update['publication_date']}\n**Risk Area:** {update['risk_area']}")
+                            st.markdown(
+                                f"**Title:** {update['title']}\n**Date:** {update['publication_date']}\n**Risk Area:** {update['risk_area']}"
+                            )
                     else:
-                        st.markdown(f"**Title:** {update['title']}\n**Date:** {update['publication_date']}\n**Risk Area:** {update['risk_area']}")
-                        st.markdown(f"**Summary:** {update.get('summary', 'No summary available.')}")
+                        st.markdown(
+                            f"**Title:** {update['title']}\n**Date:** {update['publication_date']}\n**Risk Area:** {update['risk_area']}"
+                        )
+                        st.markdown(
+                            f"**Summary:** {update.get('summary', 'No summary available.')}"
+                        )
 
     conn.close()
 
 
-def display_scrape_and_process():
+def display_scrape_and_process() -> None:
     """Display the scrape and process interface."""
     logger.debug("Displaying scrape and process interface")
-    st.markdown("## 🔄 Scrape & Process")
+    st.markdown("## \ud83d\udd04 Scrape & Process")
 
     col1, col2 = st.columns(2)
 
     with col1:
-        st.markdown("### 🌐 Scrape EBA Updates")
+        st.markdown("### \ud83c\udf10 Scrape EBA Updates")
         limit = st.number_input("Number of updates to scrape", min_value=1, max_value=50, value=5)
         delay = st.slider("Delay between requests (seconds)", 0.0, 5.0, 1.0, 0.1)
         document_type = st.text_input("Document type filter", value="248")
 
-        if st.button("🚀 Start Scraping"):
+        if st.button("\ud83d\ude80 Start Scraping"):
             with st.spinner("Scraping EBA website..."):
                 success, output = run_script(
                     "scrape_eba.py",
-                    ["--limit", str(limit), "--delay", str(delay), "--document-type", document_type]
+                    [
+                        "--limit",
+                        str(limit),
+                        "--delay",
+                        str(delay),
+                        "--document-type",
+                        document_type,
+                    ],
                 )
                 if success:
                     logger.success("Scraping completed successfully")
@@ -311,9 +341,9 @@ def display_scrape_and_process():
                     st.error(f"Scraping failed:\n{output}")
 
     with col2:
-        st.markdown("### 📁 Process Updates")
+        st.markdown("### \ud83d\udcc1 Process Updates")
 
-        if st.button("🔄 Process All Files"):
+        if st.button("\ud83d\udd04 Process All Files"):
             with st.spinner("Processing files..."):
                 success, output = run_script("process_updates.py", ["--all"])
                 if success:
@@ -325,10 +355,13 @@ def display_scrape_and_process():
                     st.error(f"Processing failed:\n{output}")
 
 
-def display_dashboard():
+def display_dashboard() -> None:
     """Display the main dashboard with metrics."""
     logger.debug("Displaying dashboard")
-    st.markdown('<p class="main-header">🛡️ IT Risk Manager Agent</p>', unsafe_allow_html=True)
+    st.markdown(
+        '<p class="main-header">\ud83d\udee1\ufe0f IT Risk Manager Agent</p>',
+        unsafe_allow_html=True,
+    )
 
     conn = get_db_connection()
 
@@ -361,7 +394,7 @@ def display_dashboard():
     conn.close()
 
 
-def main():
+def main() -> None:
     """Main function for the Streamlit app."""
     logger.info("Streamlit app main function started")
 
@@ -373,11 +406,16 @@ def main():
         st.session_state["selected_update"] = None
 
     # Sidebar navigation
-    st.sidebar.title("📌 Navigation")
+    st.sidebar.title("\ud83d\udccc Navigation")
 
     # Define pages without emojis for session state
     pages = ["Overview", "Detail View", "Alert Generator", "Scrape & Process"]
-    page_labels = ["🏠 Overview", "🔍 Detail View", "🚨 Alert Generator", "🔄 Scrape & Process"]
+    page_labels = [
+        "\ud83c\udfe0 Overview",
+        "\ud83d\udd0d Detail View",
+        "\ud83d\udea8 Alert Generator",
+        "\ud83d\udd04 Scrape & Process",
+    ]
 
     # Find the current page index
     try:
@@ -390,7 +428,7 @@ def main():
     selected_page = st.sidebar.radio(
         "Go to",
         page_labels,
-        index=current_index
+        index=current_index,
     )
 
     # Map the selected page label back to the page name
@@ -401,14 +439,16 @@ def main():
         display_dashboard()
 
         st.markdown("---")
-        st.markdown("## 📋 Recent Updates")
+        st.markdown("## \ud83d\udccb Recent Updates")
 
         conn = get_db_connection()
 
         # Filters
         col1, col2, col3 = st.columns(3)
         with col1:
-            days = st.number_input("Last N days", min_value=0, max_value=365, value=30, key="filter_days")
+            days = st.number_input(
+                "Last N days", min_value=0, max_value=365, value=30, key="filter_days"
+            )
         with col2:
             risk_areas = ["All"] + get_risk_areas(conn)
             selected_risk_area = st.selectbox("Risk Area", risk_areas)
@@ -447,11 +487,14 @@ def main():
 
     # Footer
     st.markdown("---")
-    st.markdown("""
+    st.markdown(
+        """
         <div style='text-align: center; color: #666;'>
             <p>IT Risk Manager Agent | Powered by Mistral-7B & SQLite | <a href="https://github.com/Tinux-67/IT-risk-manager-agent">GitHub</a></p>
         </div>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
 
     logger.info("Streamlit app main function completed")
 

@@ -6,11 +6,10 @@ Saves raw data (PDF/HTML) to data/raw/eba/.
 Target URL: https://www.eba.europa.eu/publications-and-media/publications
 """
 
+import argparse
 import os
 import re
 import time
-import argparse
-from datetime import datetime
 from urllib.parse import urljoin
 
 import requests
@@ -19,12 +18,11 @@ from loguru import logger
 
 from config import Config
 from scripts.scraping_utils import (
+    build_url,
+    extract_date_from_filename,
+    extract_date_from_url,
     get_session,
     sanitize_filename,
-    extract_date_from_url,
-    extract_date_from_filename,
-    download_file,
-    build_url,
     save_raw_update,
 )
 
@@ -44,10 +42,10 @@ logger.add(
 def build_eba_url(params: dict = None) -> str:
     """
     Build the EBA publications URL with query parameters.
-    
+
     Args:
         params: Dictionary of query parameters (default: {"document_type": "248"}).
-        
+
     Returns:
         str: Full EBA publications URL with query parameters.
     """
@@ -60,11 +58,11 @@ def scrape_eba_regulations(session: requests.Session = None, params: dict = None
     """
     Scrape the EBA publications page for regulatory updates.
     Returns a list of dictionaries with title, URL, and date.
-    
+
     Args:
         session: Optional requests.Session for connection reuse.
         params: Dictionary of query parameters for the EBA URL.
-        
+
     Returns:
         list[dict]: List of updates with 'title', 'url', 'date', and 'source'.
     """
@@ -128,12 +126,14 @@ def scrape_eba_regulations(session: requests.Session = None, params: dict = None
             if date == "Unknown":
                 date = extract_date_from_filename(href)
 
-            updates.append({
-                "title": title,
-                "url": full_url,
-                "date": date,
-                "source": "EBA",
-            })
+            updates.append(
+                {
+                    "title": title,
+                    "url": full_url,
+                    "date": date,
+                    "source": "EBA",
+                }
+            )
 
         logger.success(f"Found {len(updates)} updates on EBA publications page")
 
@@ -151,14 +151,27 @@ def scrape_eba_regulations(session: requests.Session = None, params: dict = None
 
 def main():
     parser = argparse.ArgumentParser(description="Scrape EBA regulatory updates.")
-    parser.add_argument("--limit", type=int, default=10, help="Limit the number of updates to scrape.")
-    parser.add_argument("--dry-run", action="store_true", help="Only list updates without downloading.")
-    parser.add_argument("--delay", type=float, default=Config.DEFAULT_DELAY, 
-                        help=f"Delay between requests in seconds (default: {Config.DEFAULT_DELAY}).")
-    parser.add_argument("--document-type", type=str, default="248", 
-                        help="Filter by document type (default: 248 for regulations/guidelines).")
-    parser.add_argument("--all-types", action="store_true", 
-                        help="Scrape all document types (no filter).")
+    parser.add_argument(
+        "--limit", type=int, default=10, help="Limit the number of updates to scrape."
+    )
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Only list updates without downloading."
+    )
+    parser.add_argument(
+        "--delay",
+        type=float,
+        default=Config.DEFAULT_DELAY,
+        help=f"Delay between requests in seconds (default: {Config.DEFAULT_DELAY}).",
+    )
+    parser.add_argument(
+        "--document-type",
+        type=str,
+        default="248",
+        help="Filter by document type (default: 248 for regulations/guidelines).",
+    )
+    parser.add_argument(
+        "--all-types", action="store_true", help="Scrape all document types (no filter)."
+    )
     args = parser.parse_args()
 
     logger.info("Starting EBA scrape...")
@@ -184,7 +197,7 @@ def main():
 
     logger.info(f"Found {len(updates)} updates. Processing first {args.limit}...")
 
-    for i, update in enumerate(updates[:args.limit]):
+    for i, update in enumerate(updates[: args.limit]):
         logger.info(f"Processing update {i+1}/{min(args.limit, len(updates))}: {update['title']}")
         print(f"\n{i+1}. {update['title']}")
         print(f"   \u001b[36mDate:\u001b[0m {update['date']}")

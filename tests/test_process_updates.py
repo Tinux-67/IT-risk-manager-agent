@@ -4,21 +4,23 @@ Tests for process_updates.py module.
 
 import os
 import sqlite3
-import pytest
-from unittest.mock import patch, MagicMock
-from pathlib import Path
 
 # Add parent directory to path for imports
 import sys
+from pathlib import Path
+from unittest.mock import MagicMock, patch
+
+import pytest
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from scripts.process_updates import (
-    init_db,
-    extract_text_from_pdf,
-    extract_text_from_html,
-    categorize_risk_area,
     assess_urgency,
+    categorize_risk_area,
+    extract_text_from_html,
+    extract_text_from_pdf,
     generate_summary,
+    init_db,
     process_file,
 )
 
@@ -47,7 +49,9 @@ def sample_html_path(tmp_path):
     """Fixture to create a sample HTML file."""
     html_path = tmp_path / "sample.html"
     # Use "cybersecurity" in the text to match the keyword
-    html_content = "<html><body><p>This is a test document about cybersecurity and IT risk.</p></body></html>"
+    html_content = (
+        "<html><body><p>This is a test document about cybersecurity and IT risk.</p></body></html>"
+    )
     html_path.write_text(html_content)
     return str(html_path)
 
@@ -58,7 +62,6 @@ class TestInitDb:
     def test_init_db_creates_tables(self):
         """Test that init_db creates required tables."""
         # Use a temporary file for testing
-        test_db_path = ":memory:"
         conn = init_db()
 
         cursor = conn.cursor()
@@ -238,6 +241,7 @@ class TestProcessFile:
 
         # Create a temporary PDF file
         import tempfile
+
         with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as f:
             f.write(b"%PDF-1.4\n")
             temp_pdf_path = f.name
@@ -284,6 +288,7 @@ class TestProcessFile:
         mock_extract.return_value = ""
 
         import tempfile
+
         with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as f:
             f.write(b"%PDF-1.4\n")
             temp_pdf_path = f.name
@@ -299,6 +304,7 @@ class TestProcessFile:
     def test_process_file_unsupported_type(self):
         """Test processing an unsupported file type."""
         import tempfile
+
         with tempfile.NamedTemporaryFile(suffix=".txt", delete=False) as f:
             f.write(b"Test content")
             temp_txt_path = f.name

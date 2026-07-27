@@ -103,12 +103,17 @@ select = [
     "T20", # flake8-print
 ]
 ignore = [
+    "S108",  # Probable insecure usage of temporary file (false positive in tests)
     "E501",  # line too long (handled by black)
     "B008",  # do not perform function calls in argument defaults
     "S101",  # assert used
+    "T201",  # print found (allowed in CLI scripts)
 ]
 fixable = ["ALL"]
 unfixable = []
+
+[tool.ruff.lint.per-file-ignores]
+"scripts/*" = ["T201"]
 
 [tool.pytest.ini_options]
 python_files = "test_*.py"

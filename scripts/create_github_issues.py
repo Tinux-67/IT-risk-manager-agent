@@ -16,10 +16,8 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import Dict, List, Optional, Union
 
 import requests
-
 
 # GitHub API base URL
 GITHUB_API_URL = "https://api.github.com"
@@ -28,7 +26,7 @@ GITHUB_API_URL = "https://api.github.com"
 class GitHubIssuesCreator:
     """Class to create GitHub issues from a JSON template."""
 
-    def __init__(self, repo: str, token: str, dry_run: bool = False):
+    def __init__(self, repo: str, token: str, dry_run: bool = False) -> None:
         """
         Initialize the GitHub Issues Creator.
 
@@ -41,21 +39,23 @@ class GitHubIssuesCreator:
         self.token = token
         self.dry_run = dry_run
         self.session = requests.Session()
-        self.session.headers.update({
-            "Authorization": f"token {self.token}",
-            "Accept": "application/vnd.github+json",
-            "X-GitHub-Api-Version": "2022-11-28",
-        })
-        self.created_issues: List[Dict] = []
-        self.skipped_issues: List[Dict] = []
+        self.session.headers.update(
+            {
+                "Authorization": f"token {self.token}",
+                "Accept": "application/vnd.github+json",
+                "X-GitHub-Api-Version": "2022-11-28",
+            }
+        )
+        self.created_issues: list[dict] = []
+        self.skipped_issues: list[dict] = []
 
     def _api_request(
         self,
         method: str,
         endpoint: str,
-        data: Optional[Dict] = None,
-        params: Optional[Dict] = None,
-    ) -> Optional[Union[Dict, List[Dict]]]:
+        data: dict | None = None,
+        params: dict | None = None,
+    ) -> dict | list[dict] | None:
         """
         Make a request to the GitHub API.
 
@@ -71,9 +71,9 @@ class GitHubIssuesCreator:
         url = f"{GITHUB_API_URL}{endpoint}"
         try:
             if self.dry_run:
-                print(f"[DRY RUN] {method} {url}")
+                print(f"[DRY RUN] {method} {url}")  # noqa: T201
                 if data:
-                    print(f"  Data: {json.dumps(data, indent=2)}")
+                    print(f"  Data: {json.dumps(data, indent=2)}")  # noqa: T201
                 # Return mock data for dry run
                 if endpoint.endswith("/labels"):
                     return []  # Return empty list for labels in dry run
@@ -94,24 +94,26 @@ class GitHubIssuesCreator:
             if response.status_code == 200 or response.status_code == 201:
                 return response.json()
             elif response.status_code == 403:
-                print(f"❌ Rate limit exceeded or permission denied: {response.text}")
+                print(
+                    f"\u274c Rate limit exceeded or permission denied: {response.text}"
+                )  # noqa: T201
                 return None
             elif response.status_code == 404:
-                print(f"❌ Not found: {url}")
+                print(f"\u274c Not found: {url}")  # noqa: T201
                 return None
             else:
-                print(f"❌ API Error {response.status_code}: {response.text}")
+                print(f"\u274c API Error {response.status_code}: {response.text}")  # noqa: T201
                 return None
         except requests.exceptions.RequestException as e:
-            print(f"❌ Request failed: {e}")
+            print(f"\u274c Request failed: {e}")  # noqa: T201
             return None
 
-    def get_repo_info(self) -> Optional[Dict]:
+    def get_repo_info(self) -> dict | None:
         """Get repository information."""
         endpoint = f"/repos/{self.repo}"
         return self._api_request("GET", endpoint)
 
-    def get_or_create_label(self, label_name: str, color: str = "0075ca") -> Optional[Dict]:
+    def get_or_create_label(self, label_name: str, color: str = "0075ca") -> dict | None:
         """
         Get an existing label or create a new one.
 
@@ -125,17 +127,19 @@ class GitHubIssuesCreator:
         # List existing labels
         endpoint = f"/repos/{self.repo}/labels"
         response = self._api_request("GET", endpoint)
-        
+
         # Handle case where response is not a list (e.g., string or None)
         if response is None:
             return None
         if isinstance(response, str):
-            print(f"⚠️ Unexpected response type for labels: {type(response)}")
+            print(
+                f"\u26a0\ufe0f Unexpected response type for labels: {type(response)}"
+            )  # noqa: T201
             return None
-        
+
         # Ensure response is a list
         if not isinstance(response, list):
-            print(f"⚠️ Unexpected response format for labels")
+            print("\u26a0\ufe0f Unexpected response format for labels")  # noqa: T201
             return None
 
         # Check if label exists
@@ -152,7 +156,7 @@ class GitHubIssuesCreator:
             return self._api_request("POST", endpoint, data=data)
         return {"name": label_name, "color": color}
 
-    def get_or_create_milestone(self, title: str, description: str = "") -> Optional[Dict]:
+    def get_or_create_milestone(self, title: str, description: str = "") -> dict | None:
         """
         Get an existing milestone or create a new one.
 
@@ -165,15 +169,17 @@ class GitHubIssuesCreator:
         """
         endpoint = f"/repos/{self.repo}/milestones"
         response = self._api_request("GET", endpoint, params={"state": "all"})
-        
+
         # Handle case where response is not a list
         if response is None:
             return None
         if isinstance(response, str):
-            print(f"⚠️ Unexpected response type for milestones: {type(response)}")
+            print(
+                f"\u26a0\ufe0f Unexpected response type for milestones: {type(response)}"
+            )  # noqa: T201
             return None
         if not isinstance(response, list):
-            print(f"⚠️ Unexpected response format for milestones")
+            print("\u26a0\ufe0f Unexpected response format for milestones")  # noqa: T201
             return None
 
         # Check if milestone exists
@@ -195,9 +201,9 @@ class GitHubIssuesCreator:
         self,
         title: str,
         body: str,
-        labels: List[str],
-        milestone_title: Optional[str] = None,
-    ) -> Optional[Dict]:
+        labels: list[str],
+        milestone_title: str | None = None,
+    ) -> dict | None:
         """
         Create a new GitHub issue.
 
@@ -238,10 +244,10 @@ class GitHubIssuesCreator:
         issue = self._api_request("POST", endpoint, data=issue_data)
 
         if issue and isinstance(issue, dict):
-            print(f"✅ Created issue: #{issue.get('number')} - {title}")
+            print(f"\u2705 Created issue: #{issue.get('number')} - {title}")  # noqa: T201
             self.created_issues.append(issue)
         else:
-            print(f"❌ Failed to create issue: {title}")
+            print(f"\u274c Failed to create issue: {title}")  # noqa: T201
             self.skipped_issues.append({"title": title, "error": "API failed"})
 
         return issue
@@ -266,12 +272,12 @@ class GitHubIssuesCreator:
         # Get project columns
         endpoint = f"/projects/{project_id}/columns"
         columns = self._api_request("GET", endpoint)
-        
+
         # Handle response
         if columns is None:
             return False
         if not isinstance(columns, list):
-            print(f"⚠️ Unexpected response format for project columns")
+            print("\u26a0\ufe0f Unexpected response format for project columns")  # noqa: T201
             return False
 
         # Find the column by name
@@ -282,7 +288,7 @@ class GitHubIssuesCreator:
                 break
 
         if not target_column:
-            print(f"❌ Column '{column_name}' not found in project")
+            print(f"\u274c Column '{column_name}' not found in project")  # noqa: T201
             return False
 
         # Get the issue node ID
@@ -321,13 +327,15 @@ class GitHubIssuesCreator:
         )
 
         if response and isinstance(response, dict) and "errors" not in response:
-            print(f"✅ Added issue #{issue_number} to project column '{column_name}'")
+            print(
+                f"\u2705 Added issue #{issue_number} to project column '{column_name}'"
+            )  # noqa: T201
             return True
         else:
-            print(f"❌ Failed to add issue to project: {response}")
+            print(f"\u274c Failed to add issue to project: {response}")  # noqa: T201
             return False
 
-    def get_project_id(self, project_name: str) -> Optional[int]:
+    def get_project_id(self, project_name: str) -> int | None:
         """
         Get the project ID by name.
 
@@ -340,12 +348,12 @@ class GitHubIssuesCreator:
         # Get all projects for the repository
         endpoint = f"/repos/{self.repo}/projects"
         response = self._api_request("GET", endpoint, params={"state": "all"})
-        
+
         # Handle response
         if response is None:
             return None
         if not isinstance(response, list):
-            print(f"⚠️ Unexpected response format for projects")
+            print("\u26a0\ufe0f Unexpected response format for projects")  # noqa: T201
             return None
 
         for project in response:
@@ -362,10 +370,10 @@ class GitHubIssuesCreator:
             template_path: Path to the JSON template file
         """
         # Load the template
-        with open(template_path, "r", encoding="utf-8") as f:
+        with open(template_path, encoding="utf-8") as f:
             issues_template = json.load(f)
 
-        print(f"📄 Loaded {len(issues_template)} issues from template")
+        print(f"\ud83d\udcc4 Loaded {len(issues_template)} issues from template")  # noqa: T201
 
         # Create issues
         for issue_data in issues_template:
@@ -376,9 +384,9 @@ class GitHubIssuesCreator:
                 milestone_title=issue_data.get("milestone"),
             )
 
-        print(f"\n📊 Summary:")
-        print(f"   ✅ Created: {len(self.created_issues)} issues")
-        print(f"   ❌ Skipped: {len(self.skipped_issues)} issues")
+        print("\n\ud83d\udcca Summary:")  # noqa: T201
+        print(f"   \u2705 Created: {len(self.created_issues)} issues")  # noqa: T201
+        print(f"   \u274c Skipped: {len(self.skipped_issues)} issues")  # noqa: T201
 
     def create_issues_and_add_to_project(
         self,
@@ -397,19 +405,19 @@ class GitHubIssuesCreator:
         # Get project ID
         project_id = self.get_project_id(project_name)
         if project_id is None:
-            print(f"❌ Project '{project_name}' not found")
-            print("   Creating issues without project board...")
+            print(f"\u274c Project '{project_name}' not found")  # noqa: T201
+            print("   Creating issues without project board...")  # noqa: T201
             self.create_issues_from_template(template_path)
             return
 
-        print(f"🎯 Found project: {project_name} (ID: {project_id})")
+        print(f"\ud83c\udfaf Found project: {project_name} (ID: {project_id})")  # noqa: T201
 
         # Create issues
         self.create_issues_from_template(template_path)
 
         # Add issues to project
         if self.created_issues:
-            print(f"\n📋 Adding issues to project board...")
+            print("\n\ud83d\udccb Adding issues to project board...")  # noqa: T201
             for issue in self.created_issues:
                 if isinstance(issue, dict):
                     self.add_issue_to_project(
@@ -419,11 +427,9 @@ class GitHubIssuesCreator:
                     )
 
 
-def main():
+def main() -> None:
     """Main function."""
-    parser = argparse.ArgumentParser(
-        description="Create GitHub issues from a JSON template"
-    )
+    parser = argparse.ArgumentParser(description="Create GitHub issues from a JSON template")
     parser.add_argument(
         "--repo",
         type=str,
@@ -464,7 +470,7 @@ def main():
     # Check if template file exists
     template_path = Path(args.template)
     if not template_path.exists():
-        print(f"❌ Template file not found: {template_path}")
+        print(f"\u274c Template file not found: {template_path}")  # noqa: T201
         sys.exit(1)
 
     # Initialize creator
@@ -474,14 +480,14 @@ def main():
         dry_run=args.dry_run,
     )
 
-    print(f"🚀 Starting GitHub Issues Creator")
-    print(f"   Repository: {args.repo}")
-    print(f"   Template: {template_path}")
-    print(f"   Dry run: {args.dry_run}")
+    print("\ud83d\ude80 Starting GitHub Issues Creator")  # noqa: T201
+    print(f"   Repository: {args.repo}")  # noqa: T201
+    print(f"   Template: {template_path}")  # noqa: T201
+    print(f"   Dry run: {args.dry_run}")  # noqa: T201
     if args.project:
-        print(f"   Project: {args.project}")
-        print(f"   Column: {args.column}")
-    print()
+        print(f"   Project: {args.project}")  # noqa: T201
+        print(f"   Column: {args.column}")  # noqa: T201
+    print()  # noqa: T201
 
     # Create issues
     if args.project:
@@ -493,7 +499,7 @@ def main():
     else:
         creator.create_issues_from_template(str(template_path))
 
-    print(f"\n✨ Done!")
+    print("\n\u2728 Done!")  # noqa: T201
 
 
 if __name__ == "__main__":

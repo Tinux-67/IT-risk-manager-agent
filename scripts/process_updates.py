@@ -8,6 +8,7 @@ import argparse
 import os
 import re
 import sqlite3
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 
 from loguru import logger
@@ -291,8 +292,11 @@ def determine_source(file_path: str) -> str:
         return "EBA"
 
 
-def process_file(file_path: str, conn: sqlite3.Connection) -> bool:
-    """Process a single raw file and store it in the database."""
+def process_file(file_path: str, conn: sqlite3.Connection) -> tuple[bool, str]:
+    """
+    Process a single raw file and store it in the database.
+    Returns a tuple of (success, filename) for tracking.
+    """
     try:
         cursor = conn.cursor()
         logger.info(f"Processing file: {file_path}")
@@ -319,11 +323,11 @@ def process_file(file_path: str, conn: sqlite3.Connection) -> bool:
             raw_text = extract_text_from_docx(file_path)
         else:
             logger.error(f"Unsupported file type: {file_path}")
-            return False
+            return False, filename
 
         if not raw_text:
             logger.warning(f"No text extracted from {file_path}")
-            return False
+            return False, filename
 
         # Categorize and assess using LLM or keywords
         risk_area = categorize_risk_area(raw_text)
@@ -363,57 +367,54 @@ def process_file(file_path: str, conn: sqlite3.Connection) -> bool:
         logger.success(
             f"Processed: {filename} (Source: {source}, Risk: {risk_area}, Urgency: {urgency})"
         )
-        return True
+        return True, filename
 
     except Exception as e:
         logger.error(f"Error processing {file_path}: {e}")
         conn.rollback()
-        return False
+        return False, filename
 
 
-def process_all_files(conn: sqlite3.Connection) -> None:
-    """Process all files in the raw data directories (EBA and MAS)."""
+def process_files_parallel(
+    file_paths: list[str], conn: sqlite3.Connection, max_workers: int = 4
+) -> dict[str, bool]:
+    """
+    Process multiple files in parallel using ThreadPoolExecutor.
+    Returns a dictionary mapping filenames to success status.
+    """
+    results = {}
+
+    def process_wrapper(file_path: str) -> tuple[bool, str]:
+        """Wrapper function for parallel processing."""
+        return process_file(file_path, conn)
+
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        # Submit all tasks
+        future_to_file = {
+            executor.submit(process_wrapper, file_path): file_path for file_path in file_paths
+        }
+
+        # Process completed futures as they come in
+        for future in as_completed(future_to_file):
+            file_path = future_to_file[future]
+            try:
+                success, filename = future.result()
+                results[filename] = success
+            except Exception as e:
+                logger.error(f"Error in parallel processing of {file_path}: {e}")
+                results[os.path.basename(file_path)] = False
+
+    return results
+
+
+def collect_raw_files(source: str = "all") -> list[str]:
+    """Collect all raw files from specified sources."""
     raw_files = []
-
-    # Find all supported files in EBA raw data directory
-    eba_raw_dir = Config.EBA_RAW_DATA_DIR
-    if os.path.exists(eba_raw_dir):
-        for root, _, files in os.walk(eba_raw_dir):
-            for file in files:
-                if file.lower().endswith(
-                    (".pdf", ".html", ".htm", ".xlsx", ".xls", ".docx", ".doc")
-                ):
-                    raw_files.append(os.path.join(root, file))
-
-    # Find all supported files in MAS raw data directory
-    mas_raw_dir = Config.MAS_RAW_DATA_DIR
-    if os.path.exists(mas_raw_dir):
-        for root, _, files in os.walk(mas_raw_dir):
-            for file in files:
-                if file.lower().endswith(
-                    (".pdf", ".html", ".htm", ".xlsx", ".xls", ".docx", ".doc")
-                ):
-                    raw_files.append(os.path.join(root, file))
-
-    if not raw_files:
-        logger.warning(f"No raw files found in {eba_raw_dir} or {mas_raw_dir}")
-        return
-
-    logger.info(f"Found {len(raw_files)} raw files to process.")
-
-    for file_path in raw_files:
-        process_file(file_path, conn)
-
-
-def process_source_files(conn: sqlite3.Connection, source: str = "all") -> None:
-    """Process files from a specific source (EBA or MAS)."""
-    raw_files = []
-    source_dir = None
 
     if source == "EBA" or source == "all":
-        source_dir = Config.EBA_RAW_DATA_DIR
-        if os.path.exists(source_dir):
-            for root, _, files in os.walk(source_dir):
+        eba_raw_dir = Config.EBA_RAW_DATA_DIR
+        if os.path.exists(eba_raw_dir):
+            for root, _, files in os.walk(eba_raw_dir):
                 for file in files:
                     if file.lower().endswith(
                         (".pdf", ".html", ".htm", ".xlsx", ".xls", ".docx", ".doc")
@@ -421,23 +422,70 @@ def process_source_files(conn: sqlite3.Connection, source: str = "all") -> None:
                         raw_files.append(os.path.join(root, file))
 
     if source == "MAS" or source == "all":
-        source_dir = Config.MAS_RAW_DATA_DIR
-        if os.path.exists(source_dir):
-            for root, _, files in os.walk(source_dir):
+        mas_raw_dir = Config.MAS_RAW_DATA_DIR
+        if os.path.exists(mas_raw_dir):
+            for root, _, files in os.walk(mas_raw_dir):
                 for file in files:
                     if file.lower().endswith(
                         (".pdf", ".html", ".htm", ".xlsx", ".xls", ".docx", ".doc")
                     ):
                         raw_files.append(os.path.join(root, file))
 
+    return raw_files
+
+
+def process_all_files(conn: sqlite3.Connection, max_workers: int = 4) -> None:
+    """
+    Process all files in the raw data directories (EBA and MAS) using parallel processing.
+    Uses ThreadPoolExecutor for improved performance with large datasets.
+    """
+    raw_files = collect_raw_files(source="all")
+
+    if not raw_files:
+        logger.warning(
+            f"No raw files found in {Config.EBA_RAW_DATA_DIR} or {Config.MAS_RAW_DATA_DIR}"
+        )
+        return
+
+    logger.info(f"Found {len(raw_files)} raw files to process with {max_workers} workers.")
+
+    # Process files in parallel
+    results = process_files_parallel(raw_files, conn, max_workers)
+
+    # Log summary
+    success_count = sum(1 for v in results.values() if v)
+    failure_count = len(results) - success_count
+    logger.info(
+        f"Parallel processing completed: {success_count} succeeded, {failure_count} failed out of {len(results)} total"
+    )
+
+
+def process_source_files(
+    conn: sqlite3.Connection, source: str = "all", max_workers: int = 4
+) -> None:
+    """
+    Process files from a specific source (EBA or MAS) using parallel processing.
+    Uses ThreadPoolExecutor for improved performance.
+    """
+    raw_files = collect_raw_files(source=source)
+
     if not raw_files:
         logger.warning(f"No raw files found for source: {source}")
         return
 
-    logger.info(f"Found {len(raw_files)} raw files for source '{source}' to process.")
+    logger.info(
+        f"Found {len(raw_files)} raw files for source '{source}' to process with {max_workers} workers."
+    )
 
-    for file_path in raw_files:
-        process_file(file_path, conn)
+    # Process files in parallel
+    results = process_files_parallel(raw_files, conn, max_workers)
+
+    # Log summary
+    success_count = sum(1 for v in results.values() if v)
+    failure_count = len(results) - success_count
+    logger.info(
+        f"Parallel processing completed: {success_count} succeeded, {failure_count} failed out of {len(results)} total"
+    )
 
 
 def main():
@@ -454,6 +502,12 @@ def main():
         default="all",
         choices=["all", "EBA", "MAS"],
         help="Process files from a specific source (default: all).",
+    )
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=4,
+        help="Number of worker threads for parallel processing (default: 4).",
     )
     parser.add_argument(
         "--no-llm", action="store_true", help="Disable LLM (Ollama) for categorization."
@@ -476,9 +530,9 @@ def main():
             return
         process_file(args.file, conn)
     elif args.all:
-        process_all_files(conn)
+        process_all_files(conn, max_workers=args.workers)
     elif args.source != "all":
-        process_source_files(conn, args.source)
+        process_source_files(conn, args.source, max_workers=args.workers)
     else:
         logger.error("No action specified. Use --file, --all, or --source.")
 

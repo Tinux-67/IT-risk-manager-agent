@@ -34,10 +34,15 @@ jobs:
           pip install -r requirements-dev.txt
 
       - name: Run Ruff linter
-        run: ruff check scripts/ tests/ app.py config.py
+        run: ruff check . --config pyproject.toml
 
       - name: Run Black formatter (check only)
-        run: black --check scripts/ tests/ app.py config.py
+        run: black --check .
 
       - name: Run isort (check only)
-        run: isort --check-only scripts/ tests/ app.py config.py
+        run: isort --check-only .
+
+      - name: Run codespell
+        run: |
+          pip install codespell
+          codespell --skip='*.min.js,*.min.css' --ignore-words-list=EBA,MAS,DORA,ba,ca,te,ti

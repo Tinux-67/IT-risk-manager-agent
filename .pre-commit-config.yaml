@@ -1,0 +1,36 @@
+repos:
+  - repo: local
+    hooks:
+      - id: ruff
+        name: ruff
+        entry: ruff check --config pyproject.toml --fix
+        language: system
+        types_or: [python, pyi]
+        require_serial: true
+
+  - repo: local
+    hooks:
+      - id: black
+        name: black
+        entry: black --config pyproject.toml
+        language: system
+        types_or: [python, pyi]
+        require_serial: true
+
+  - repo: local
+    hooks:
+      - id: isort
+        name: isort
+        entry: isort --settings-path pyproject.toml
+        language: system
+        types_or: [python, pyi]
+        require_serial: true
+
+  - repo: local
+    hooks:
+      - id: codespell
+        name: codespell
+        entry: codespell --skip='*.min.js,*.min.css,*.json,*.md' --ignore-words-list=EBA,MAS,DORA,ba,ca,te,ti,Alle,alle,als,architectuur,Architectuur,Titel,actieve,tabel
+        language: system
+        types_or: [python]
+        exclude: ^(\.git|\.mypy_cache|\.tox|\.venv|_build|build|dist|\.github)/

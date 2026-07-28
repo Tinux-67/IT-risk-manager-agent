@@ -1,52 +1,137 @@
-# Regulatory Agent PoC
+# IT Risk Manager Agent
 
-A **CLI-based agent** for tracking and interpreting EBA regulations, powered by **Mistral-7B** and **SQLite**.
+A **CLI-based agent** for tracking and interpreting EBA and MAS regulations, powered by **Mistral-7B** and **SQLite**.
 
 [![Test](https://github.com/Tinux-67/IT-risk-manager-agent/actions/workflows/test.yml/badge.svg)](https://github.com/Tinux-67/IT-risk-manager-agent/actions/workflows/test.yml)
 [![Lint](https://github.com/Tinux-67/IT-risk-manager-agent/actions/workflows/lint.yml/badge.svg)](https://github.com/Tinux-67/IT-risk-manager-agent/actions/workflows/lint.yml)
 [![Docker Build](https://github.com/Tinux-67/IT-risk-manager-agent/actions/workflows/docker-build.yml/badge.svg)](https://github.com/Tinux-67/IT-risk-manager-agent/actions/workflows/docker-build.yml)
 [![codecov](https://codecov.io/github/Tinux-67/IT-risk-manager-agent/graph/badge.svg?token=MIDSV8D4B2)](https://codecov.io/github/Tinux-67/IT-risk-manager-agent)
 
+## ✅ Status: All Badges Green
+All CI/CD workflows are currently passing:
+- ✅ **Tests** - All unit tests pass
+- ✅ **Lint** - Code passes ruff, black, and isort checks
+- ✅ **Docker Build** - Container builds successfully
+
 ## Scope
-- **Regulator**: EBA (European Banking Authority)
-- **Focus Areas**: IT Risk Management, Cybersecurity, AI Risk
-- **Output**: CLI alerts for workfloor, management, and C-level audiences.
+- **Regulators**: EBA (European Banking Authority) and MAS (Monetary Authority of Singapore)
+- **Focus Areas**: IT Risk Management, Cybersecurity, AI Risk, Compliance, Governance, Operational Risk, Data Protection, Third-Party Risk, Cloud Computing, DORA
+- **Output**: CLI alerts for workfloor, management, and C-level audiences
+
+## Features
+- **Web Scraping**: Automatically scrape regulatory updates from EBA and MAS websites
+- **LLM Processing**: Use Mistral-7B (via Ollama) for intelligent summarization and categorization
+- **Alert Generation**: Generate audience-specific alerts (workfloor, management, C-level)
+- **Database Storage**: SQLite database for structured storage of regulatory updates
+- **Streamlit Dashboard**: Web interface for viewing and filtering updates
 
 ## Setup
-1. Install dependencies:
+
+### Prerequisites
+- Python 3.11+
+- Ollama (for LLM functionality)
+
+### Installation
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/Tinux-67/IT-risk-manager-agent.git
+   cd IT-risk-manager-agent
+   ```
+
+2. Install dependencies:
    ```bash
    pip install -r requirements.txt
    ```
-2. Set up Ollama and Mistral-7B:
+
+3. Set up Ollama and Mistral-7B:
    ```bash
    ollama pull mistral
    ```
-3. Run the scripts:
+
+4. Initialize directories:
    ```bash
-   python scripts/scrape_eba.py
-   python scripts/process_updates.py
-   python scripts/generate_alerts.py --days 7
+   python -c "from config import Config; Config.init_dirs()"
    ```
 
+## Usage
+
+### Scrape and Process Updates
+```bash
+# Scrape EBA updates
+python scripts/scrape_eba.py --limit 10 --delay 1.0
+
+# Scrape MAS updates
+python scripts/scrape_mas.py --limit 10 --delay 1.0
+
+# Process all scraped files
+python scripts/process_updates.py --all
+```
+
+### Generate Alerts
+```bash
+# Generate alerts for the last 7 days
+python scripts/generate_alerts.py --days 7 --audience workfloor
+
+# Generate alerts for management
+python scripts/generate_alerts.py --days 30 --audience management
+
+# Generate alerts for C-level
+python scripts/generate_alerts.py --days 30 --audience c-level --urgent-only
+```
+
+### Run Streamlit Dashboard
+```bash
+streamlit run app.py
+```
+Access the dashboard at http://localhost:8501
+
 ## Folder Structure
-- `data/raw/eba/`: Raw regulatory updates (PDFs/HTML).
-- `data/processed/`: SQLite database with processed updates.
-- `scripts/`: Python scripts for scraping, processing, and generating alerts.
+```
+.
+├── data/
+│   ├── raw/
+│   │   ├── eba/           # Raw EBA regulatory updates (PDFs/HTML)
+│   │   └── mas/           # Raw MAS regulatory updates
+│   └── processed/         # SQLite database with processed updates
+├── scripts/
+│   ├── scrape_eba.py      # Scrape EBA publications
+│   ├── scrape_mas.py      # Scrape MAS publications
+│   ├── process_updates.py # Process raw updates into database
+│   ├── generate_alerts.py # Generate audience-specific alerts
+│   └── create_github_issues.py # Create GitHub issues from templates
+├── tests/                 # Unit tests
+├── app.py                # Streamlit web interface
+├── config.py             # Central configuration
+└── README.md
+```
 
 ## Development
 
 ### Running Tests Locally
 ```bash
 # Install dev dependencies
-pip install -r requirements-dev.txt
+pip install -e ".[dev]"
 
 # Run tests with coverage
 pytest tests/ --cov=scripts -v
 
+# Run specific test file
+pytest tests/test_scrape_eba.py -v
+```
+
+### Linting and Formatting
+```bash
 # Run linting
-ruff check scripts/ tests/ app.py config.py
-black --check scripts/ tests/ app.py config.py
-isort --check-only scripts/ tests/ app.py config.py
+ruff check .
+
+# Format code with black
+black .
+
+# Sort imports
+isort .
+
+# Check all formatting
+ruff check . && black --check . && isort --check-only .
 ```
 
 ### Docker
@@ -55,11 +140,62 @@ isort --check-only scripts/ tests/ app.py config.py
 docker-compose up -d
 
 # Access Streamlit at http://localhost:8501
+
+# View logs
+docker-compose logs -f
 ```
 
----
+## Configuration
+Environment variables can be set in a `.env` file:
+```bash
+# Database settings
+DB_PATH=./data/processed/regulatory_updates.db
+DATA_DIR=./data
 
-**Note**: Codecov badge updated with correct token. Last updated: 2026-07-24.
+# Scraping settings
+DEFAULT_DELAY=1.0
+USER_AGENT="Mozilla/5.0 ..."
+
+# Ollama settings
+OLLAMA_MODEL=mistral
+OLLAMA_HOST=http://localhost:11434
+
+# Logging settings
+LOG_LEVEL=INFO
+LOG_ROTATION=1 day
+LOG_RETENTION=7 days
+```
+
+## Risk Areas
+The following risk areas are tracked:
+- IT Risk Management
+- Cybersecurity
+- AI Risk
+- Compliance
+- Governance
+- Operational Risk
+- Data Protection
+- Third-Party Risk
+- Cloud Computing
+- Digital Operational Resilience (DORA)
+- Financial Stability
+- Resolution Planning
+- Capital Requirements
+- Liquidity Risk
+- Market Risk
+- Credit Risk
+
+## Contributing
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ## License
 MIT
+
+---
+
+**Last Updated**: 2026-07-26
+**Status**: All CI/CD workflows passing ✅

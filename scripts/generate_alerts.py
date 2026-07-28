@@ -6,6 +6,7 @@ Uses Ollama (Mistral-7B) for LLM-powered summaries and insights.
 """
 
 import argparse
+import hashlib
 import os
 import sqlite3
 from datetime import datetime, timedelta
@@ -23,6 +24,10 @@ logger.add(
     level=Config.LOG_LEVEL,
     format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {file}:{line} | {message}",
 )
+
+# Cache configuration
+OLLAMA_CACHE_EXPIRY_HOURS = 1
+
 
 # Audience-specific templates
 AUDIENCE_TEMPLATES = {
@@ -90,6 +95,7 @@ AUDIENCE_TEMPLATES = {
         """,
     },
 }
+
 
 # LLM Prompts for Ollama
 LLM_PROMPTS = {
@@ -165,6 +171,63 @@ LLM_PROMPTS = {
 }
 
 
+def get_cache_key(prompt: str, model: str) -> str:
+    """Generate a unique cache key for the prompt and model combination."""
+    combined = f"{model}:{prompt}"
+    return hashlib.sha256(combined.encode()).hexdigest()
+
+
+def init_ollama_cache(conn: sqlite3.Connection) -> None:
+    """Initialize the Ollama cache table in the database."""
+    cursor = conn.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS ollama_cache (
+            cache_key TEXT PRIMARY KEY,
+            model TEXT NOT NULL,
+            prompt TEXT NOT NULL,
+            response TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            expires_at TIMESTAMP
+        )
+    """)
+    conn.commit()
+
+
+def get_cached_response(conn: sqlite3.Connection, prompt: str, model: str) -> str | None:
+    """
+    Get a cached Ollama response from the database.
+    Returns the cached response if valid and not expired, None otherwise.
+    """
+    cache_key = get_cache_key(prompt, model)
+    cursor = conn.cursor()
+
+    cursor.execute(
+        "SELECT response FROM ollama_cache WHERE cache_key = ? AND expires_at > CURRENT_TIMESTAMP",
+        (cache_key,),
+    )
+    result = cursor.fetchone()
+    return result[0] if result else None
+
+
+def cache_response(conn: sqlite3.Connection, prompt: str, model: str, response: str) -> None:
+    """Cache an Ollama response in the database with expiry."""
+    cache_key = get_cache_key(prompt, model)
+    expires_at = (datetime.now() + timedelta(hours=OLLAMA_CACHE_EXPIRY_HOURS)).strftime(
+        "%Y-%m-%d %H:%M:%S"
+    )
+
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        INSERT OR REPLACE INTO ollama_cache (cache_key, model, prompt, response, expires_at)
+        VALUES (?, ?, ?, ?, ?)
+        """,
+        (cache_key, model, prompt, response, expires_at),
+    )
+    conn.commit()
+    logger.debug(f"Cached Ollama response for prompt (key: {cache_key[:8]}...)")
+
+
 @lru_cache(maxsize=100)
 def get_ollama_response(
     prompt: str, model: str = Config.OLLAMA_MODEL, max_length: int = 2000
@@ -202,60 +265,89 @@ def get_db_connection() -> sqlite3.Connection:
     return sqlite3.connect(Config.DB_PATH)
 
 
-def generate_llm_summary(text: str) -> str:
+def get_ollama_response_with_cache(
+    prompt: str,
+    model: str = Config.OLLAMA_MODEL,
+    max_length: int = 2000,
+    conn: sqlite3.Connection | None = None,
+) -> str:
+    """
+    Get a response from Ollama with database caching.
+    Uses both lru_cache (in-memory) and database caching for persistence.
+    """
+    # Try database cache first if connection is provided
+    if conn:
+        cached = get_cached_response(conn, prompt, model)
+        if cached:
+            logger.debug("Returning cached Ollama response from database")
+            return cached
+
+    # Fall back to lru_cache or generate new response
+    response = get_ollama_response(prompt, model, max_length)
+
+    # Cache in database if connection is provided and response is valid
+    if conn and response and not response.startswith("[LLM"):
+        cache_response(conn, prompt, model, response)
+
+    return response
+
+
+def generate_llm_summary(text: str, conn: sqlite3.Connection | None = None) -> str:
     """Generate a summary using Ollama."""
     if not text or len(text) < 50:
         return "No sufficient text available for summary."
     prompt = LLM_PROMPTS["summary"].format(text=text[:4000])  # Limit input length
-    return get_ollama_response(prompt)
+    return get_ollama_response_with_cache(prompt, Config.OLLAMA_MODEL, 2000, conn)
 
 
-def generate_llm_key_takeaways(text: str) -> str:
+def generate_llm_key_takeaways(text: str, conn: sqlite3.Connection | None = None) -> str:
     """Generate key takeaways using Ollama."""
     if not text or len(text) < 50:
         return "- No sufficient text available for key takeaways."
     prompt = LLM_PROMPTS["key_takeaways"].format(text=text[:4000])
-    return get_ollama_response(prompt)
+    return get_ollama_response_with_cache(prompt, Config.OLLAMA_MODEL, 2000, conn)
 
 
-def generate_llm_business_impact(text: str) -> str:
+def generate_llm_business_impact(text: str, conn: sqlite3.Connection | None = None) -> str:
     """Generate business impact using Ollama."""
     if not text or len(text) < 50:
         return "- No sufficient text available for business impact analysis."
     prompt = LLM_PROMPTS["business_impact"].format(text=text[:4000])
-    return get_ollama_response(prompt)
+    return get_ollama_response_with_cache(prompt, Config.OLLAMA_MODEL, 2000, conn)
 
 
-def generate_llm_strategic_implications(text: str) -> str:
+def generate_llm_strategic_implications(text: str, conn: sqlite3.Connection | None = None) -> str:
     """Generate strategic implications using Ollama."""
     if not text or len(text) < 50:
         return "- No sufficient text available for strategic implications."
     prompt = LLM_PROMPTS["strategic_implications"].format(text=text[:4000])
-    return get_ollama_response(prompt)
+    return get_ollama_response_with_cache(prompt, Config.OLLAMA_MODEL, 2000, conn)
 
 
-def generate_llm_executive_summary(text: str) -> str:
+def generate_llm_executive_summary(text: str, conn: sqlite3.Connection | None = None) -> str:
     """Generate executive summary using Ollama."""
     if not text or len(text) < 50:
         return "No sufficient text available for executive summary."
     prompt = LLM_PROMPTS["executive_summary"].format(text=text[:4000])
-    return get_ollama_response(prompt)
+    return get_ollama_response_with_cache(prompt, Config.OLLAMA_MODEL, 2000, conn)
 
 
-def generate_llm_long_term_outlook(text: str) -> str:
+def generate_llm_long_term_outlook(text: str, conn: sqlite3.Connection | None = None) -> str:
     """Generate long-term outlook using Ollama."""
     if not text or len(text) < 50:
         return "No sufficient text available for long-term outlook."
     prompt = LLM_PROMPTS["long_term_outlook"].format(text=text[:4000])
-    return get_ollama_response(prompt)
+    return get_ollama_response_with_cache(prompt, Config.OLLAMA_MODEL, 2000, conn)
 
 
-def generate_llm_risk_assessment(text: str, urgency: str) -> str:
+def generate_llm_risk_assessment(
+    text: str, urgency: str, conn: sqlite3.Connection | None = None
+) -> str:
     """Generate risk assessment using Ollama."""
     if not text or len(text) < 50:
         return f"- **Risk Level**: {urgency}\n- **Likelihood**: Medium\n- **Impact**: Moderate"
     prompt = LLM_PROMPTS["risk_assessment"].format(text=text[:4000])
-    return get_ollama_response(prompt)
+    return get_ollama_response_with_cache(prompt, Config.OLLAMA_MODEL, 2000, conn)
 
 
 def get_updates_since_days(conn: sqlite3.Connection, days: int) -> list[dict]:
@@ -280,15 +372,17 @@ def get_updates_since_days(conn: sqlite3.Connection, days: int) -> list[dict]:
     return updates
 
 
-def format_alert(update: dict, audience: str, use_llm: bool = True) -> str:
+def format_alert(
+    update: dict, audience: str, use_llm: bool = True, conn: sqlite3.Connection | None = None
+) -> str:
     """Format an alert for the specified audience."""
     template = AUDIENCE_TEMPLATES.get(audience, AUDIENCE_TEMPLATES["workfloor"])
 
     # Generate content based on audience
     if use_llm:
         if audience == "workfloor":
-            summary = generate_llm_summary(update["raw_text"])
-            key_takeaways = generate_llm_key_takeaways(update["raw_text"])
+            summary = generate_llm_summary(update["raw_text"], conn)
+            key_takeaways = generate_llm_key_takeaways(update["raw_text"], conn)
             alert = template["format"].format(
                 title=update["title"],
                 date=update["publication_date"],
@@ -299,9 +393,9 @@ def format_alert(update: dict, audience: str, use_llm: bool = True) -> str:
                 key_takeaways=key_takeaways,
             )
         elif audience == "management":
-            business_impact = generate_llm_business_impact(update["raw_text"])
+            business_impact = generate_llm_business_impact(update["raw_text"], conn)
             risk_assessment = generate_llm_risk_assessment(
-                update["raw_text"], update["urgency_level"]
+                update["raw_text"], update["urgency_level"], conn
             )
             alert = template["format"].format(
                 title=update["title"],
@@ -312,9 +406,9 @@ def format_alert(update: dict, audience: str, use_llm: bool = True) -> str:
                 risk_assessment=risk_assessment,
             )
         else:  # C-level
-            executive_summary = generate_llm_executive_summary(update["raw_text"])
-            strategic_implications = generate_llm_strategic_implications(update["raw_text"])
-            long_term_outlook = generate_llm_long_term_outlook(update["raw_text"])
+            executive_summary = generate_llm_executive_summary(update["raw_text"], conn)
+            strategic_implications = generate_llm_strategic_implications(update["raw_text"], conn)
+            long_term_outlook = generate_llm_long_term_outlook(update["raw_text"], conn)
             alert = template["format"].format(
                 title=update["title"],
                 date=update["publication_date"],
@@ -395,6 +489,9 @@ def main() -> None:
 
     conn = get_db_connection()
 
+    # Initialize cache table
+    init_ollama_cache(conn)
+
     if args.all:
         updates = get_updates_since_days(conn, 365 * 10)  # 10 years
     else:
@@ -431,7 +528,7 @@ def main() -> None:
     print("=" * 80)
 
     for _update in enumerate(updates, 1):
-        alert = format_alert(_update, args.audience, use_llm)
+        alert = format_alert(_update, args.audience, use_llm, conn)
         print(alert)
         print("\n" + "=" * 80 + "\n")
 

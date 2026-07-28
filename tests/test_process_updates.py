@@ -270,7 +270,7 @@ class TestProcessFile:
             conn.commit()
 
             result = process_file(temp_pdf_path, conn)
-            assert result is True
+            assert result[0] is True
 
             # Check if data was inserted
             cursor = conn.cursor()
@@ -296,7 +296,7 @@ class TestProcessFile:
         try:
             conn = sqlite3.connect(":memory:")
             result = process_file(temp_pdf_path, conn)
-            assert result is False
+            assert result[0] is False
             conn.close()
         finally:
             os.unlink(temp_pdf_path)
@@ -312,7 +312,7 @@ class TestProcessFile:
         try:
             conn = sqlite3.connect(":memory:")
             result = process_file(temp_txt_path, conn)
-            assert result is False
+            assert result[0] is False
             conn.close()
         finally:
             os.unlink(temp_txt_path)

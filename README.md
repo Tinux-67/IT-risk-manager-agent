@@ -19,11 +19,13 @@ All CI/CD workflows are currently passing:
 - **Output**: CLI alerts for workfloor, management, and C-level audiences
 
 ## Features
-- **Web Scraping**: Automatically scrape regulatory updates from EBA and MAS websites
-- **LLM Processing**: Use Mistral-7B (via Ollama) for intelligent summarization and categorization
+- **Web Scraping**: Automatically scrape regulatory updates from EBA and MAS websites with SSRF protection
+- **LLM Processing**: Use Mistral-7B (via Ollama) for intelligent summarization and categorization with 24-hour cached responses
 - **Alert Generation**: Generate audience-specific alerts (workfloor, management, C-level)
-- **Database Storage**: SQLite database for structured storage of regulatory updates
-- **Streamlit Dashboard**: Web interface for viewing and filtering updates
+- **Database Storage**: SQLite database for structured storage of regulatory updates with optimized indexing
+- **Streamlit Dashboard**: Web interface for viewing and filtering updates with single-query optimization
+- **Excel Support**: Extract and process text from Excel (.xlsx) documents
+- **Thread-Safe Processing**: Parallel document processing with thread-local database connections
 
 ## Setup
 
@@ -63,7 +65,7 @@ python scripts/scrape_eba.py --limit 10 --delay 1.0
 # Scrape MAS updates
 python scripts/scrape_mas.py --limit 10 --delay 1.0
 
-# Process all scraped files
+# Process all scraped files (including Excel documents)
 python scripts/process_updates.py --all
 ```
 
@@ -85,6 +87,22 @@ streamlit run app.py
 ```
 Access the dashboard at http://localhost:8501
 
+## Architecture
+
+The codebase follows a modular architecture with centralized shared utilities:
+
+### Core Modules
+- **`scripts/llm_utils.py`** — Centralized Ollama LLM interface with 24-hour response caching using SHA-256 keys. Replaces duplicated LLM logic across `generate_alerts.py` and `process_updates.py`.
+- **`scripts/logging_config.py`** — Idempotent centralized logging setup called once per entry point. Replaces scattered `logger.add()` calls throughout the codebase.
+- **`scripts/scraping_utils.py`** — Shared web scraping utilities with SSRF protection via URL allowlisting. Used by `scrape_eba.py` and `scrape_mas.py`.
+
+### Entry Points
+- `scripts/scrape_eba.py` — EBA regulatory scraper
+- `scripts/scrape_mas.py` — MAS regulatory scraper
+- `scripts/process_updates.py` — Document processing pipeline (PDF, HTML, Excel) with thread-safe SQLite operations
+- `scripts/generate_alerts.py` — Alert generation engine with audience-specific formatting
+- `app.py` — Streamlit dashboard with optimized query performance
+
 ## Folder Structure
 ```
 .
@@ -94,16 +112,28 @@ Access the dashboard at http://localhost:8501
 │   │   └── mas/           # Raw MAS regulatory updates
 │   └── processed/         # SQLite database with processed updates
 ├── scripts/
-│   ├── scrape_eba.py      # Scrape EBA publications
-│   ├── scrape_mas.py      # Scrape MAS publications
-│   ├── process_updates.py # Process raw updates into database
-│   ├── generate_alerts.py # Generate audience-specific alerts
-│   └── create_github_issues.py # Create GitHub issues from templates
+│   ├── scrape_eba.py              # Scrape EBA publications
+│   ├── scrape_mas.py              # Scrape MAS publications
+│   ├── process_updates.py         # Process raw updates into database
+│   ├── generate_alerts.py         # Generate audience-specific alerts
+│   ├── create_github_issues.py    # Create GitHub issues from templates
+│   ├── llm_utils.py               # Shared Ollama interface with caching
+│   ├── logging_config.py          # Centralized logging setup
+│   └── scraping_utils.py          # Shared scraping utilities with SSRF protection
 ├── tests/                 # Unit tests
 ├── app.py                # Streamlit web interface
 ├── config.py             # Central configuration
 └── README.md
 ```
+
+## Security
+
+### SSRF Protection
+The codebase includes Server-Side Request Forgery (SSRF) protection through URL allowlisting:
+
+- **Allowed Domains**: `eba.europa.eu`, `mas.gov.sg`
+- **Implementation**: `scripts/scraping_utils.py` includes `is_allowed_url()` validation
+- **Usage**: All web scraping operations validate URLs before making HTTP requests
 
 ## Development
 
@@ -197,5 +227,5 @@ MIT
 
 ---
 
-**Last Updated**: 2026-07-26
+**Last Updated**: 2026-08-01
 **Status**: All CI/CD workflows passing ✅

@@ -36,9 +36,7 @@ def init_ollama_cache(conn: sqlite3.Connection) -> None:
     conn.commit()
 
 
-def get_cached_response(
-    conn: sqlite3.Connection, prompt: str, model: str
-) -> str | None:
+def get_cached_response(conn: sqlite3.Connection, prompt: str, model: str) -> str | None:
     """Return a valid (non-expired) cached response, or None."""
     key = get_cache_key(prompt, model)
     row = conn.execute(
@@ -48,9 +46,7 @@ def get_cached_response(
     return row[0] if row else None
 
 
-def cache_response(
-    conn: sqlite3.Connection, prompt: str, model: str, response: str
-) -> None:
+def cache_response(conn: sqlite3.Connection, prompt: str, model: str, response: str) -> None:
     """Persist an Ollama response with a 24-hour TTL."""
     key = get_cache_key(prompt, model)
     expires_at = (datetime.now() + timedelta(hours=OLLAMA_CACHE_EXPIRY_HOURS)).strftime(

@@ -4,6 +4,7 @@ Centralized logging setup for the IT Risk Manager Agent.
 Call setup_logging() once at the start of each entry point.
 Subsequent calls are no-ops (idempotent guard).
 """
+
 import sys
 
 from loguru import logger

@@ -24,6 +24,7 @@ _ALLOWED_HOSTNAMES = {"eba.europa.eu", "www.eba.europa.eu", "mas.gov.sg", "www.m
 def is_allowed_url(url: str) -> bool:
     """Return True only if the URL's hostname is in the allowlist."""
     from urllib.parse import urlparse
+
     try:
         return (urlparse(url).hostname or "") in _ALLOWED_HOSTNAMES
     except Exception:

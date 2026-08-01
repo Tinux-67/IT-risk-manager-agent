@@ -96,9 +96,7 @@ def init_db() -> sqlite3.Connection:
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_urgency ON updates(urgency_level)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_is_processed ON updates(is_processed)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_source ON updates(source)")
-    cursor.execute(
-        "CREATE INDEX IF NOT EXISTS idx_source_risk_area ON updates(source, risk_area)"
-    )
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_source_risk_area ON updates(source, risk_area)")
 
     # Initialize Ollama cache table
     init_ollama_cache(conn)
@@ -180,9 +178,7 @@ def categorize_risk_area(text: str, conn: sqlite3.Connection | None = None) -> s
     # Try LLM first if available
     if text:
         risk_areas_str = ", ".join(Config.RISK_AREAS)
-        prompt = LLM_PROMPTS["categorize"].format(
-            risk_areas=risk_areas_str, text=text[:4000]
-        )
+        prompt = LLM_PROMPTS["categorize"].format(risk_areas=risk_areas_str, text=text[:4000])
         llm_response = get_ollama_response(prompt, conn=conn)
         if llm_response and llm_response in Config.RISK_AREAS + ["Other"]:
             logger.debug(f"LLM categorized as: {llm_response}")
@@ -391,8 +387,7 @@ def process_files_parallel(
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         # Submit all tasks — each worker gets its own connection via _process_file_worker
         future_to_file = {
-            executor.submit(_process_file_worker, file_path): file_path
-            for file_path in file_paths
+            executor.submit(_process_file_worker, file_path): file_path for file_path in file_paths
         }
 
         # Process completed futures as they come in

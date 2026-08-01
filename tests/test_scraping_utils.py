@@ -226,7 +226,7 @@ class TestSaveRawUpdate:
 
         update = {
             "title": "Test Document",
-            "url": "http://example.com/test.pdf",
+            "url": "https://www.eba.europa.eu/sites/default/files/test.pdf",
             "date": "2024-01-01",
             "source": "EBA",
         }
@@ -245,7 +245,7 @@ class TestSaveRawUpdate:
 
         update = {
             "title": "Test Document",
-            "url": "http://example.com/test.pdf",
+            "url": "https://www.eba.europa.eu/sites/default/files/test.pdf",
             "date": "2024-01-01",
             "source": "EBA",
         }
@@ -262,7 +262,7 @@ class TestSaveRawUpdate:
 
         update = {
             "title": "MAS Document",
-            "url": "http://example.com/test.docx",
+            "url": "https://www.eba.europa.eu/sites/default/files/test.docx",
             "date": "2024-01-01",
             "source": "MAS_Publications",
         }
@@ -287,7 +287,9 @@ class TestDownloadFile:
         mock_file = MagicMock()
         mock_open.return_value.__enter__.return_value = mock_file
 
-        result = download_file("http://example.com/test.pdf", "/tmp/test.pdf")
+        result = download_file(
+            "https://www.eba.europa.eu/sites/default/files/test.pdf", "/tmp/test.pdf"
+        )
 
         assert result is True
         mock_file.write.assert_called_with(b"test content")
@@ -299,7 +301,9 @@ class TestDownloadFile:
         mock_response.raise_for_status.side_effect = requests.exceptions.HTTPError("HTTP Error")
         mock_get.return_value = mock_response
 
-        result = download_file("http://example.com/test.pdf", "/tmp/test.pdf")
+        result = download_file(
+            "https://www.eba.europa.eu/sites/default/files/test.pdf", "/tmp/test.pdf"
+        )
 
         assert result is False
 
@@ -312,7 +316,9 @@ class TestDownloadFile:
         )
         mock_get.return_value = mock_response
 
-        result = download_file("http://example.com/test.pdf", "/tmp/test.pdf")
+        result = download_file(
+            "https://www.eba.europa.eu/sites/default/files/test.pdf", "/tmp/test.pdf"
+        )
 
         assert result is False
 
@@ -323,7 +329,9 @@ class TestDownloadFile:
         mock_response.raise_for_status.side_effect = requests.exceptions.Timeout("Timeout")
         mock_get.return_value = mock_response
 
-        result = download_file("http://example.com/test.pdf", "/tmp/test.pdf")
+        result = download_file(
+            "https://www.eba.europa.eu/sites/default/files/test.pdf", "/tmp/test.pdf"
+        )
 
         assert result is False
 
@@ -340,7 +348,10 @@ class TestDownloadFile:
         mock_open.return_value.__enter__.return_value = mock_file
 
         # Path with non-existent directory
-        result = download_file("http://example.com/test.pdf", "/tmp/nonexistent/dir/test.pdf")
+        result = download_file(
+            "https://www.eba.europa.eu/sites/default/files/test.pdf",
+            "/tmp/nonexistent/dir/test.pdf",
+        )
 
         assert result is True
 

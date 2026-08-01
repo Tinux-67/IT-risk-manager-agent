@@ -231,7 +231,9 @@ def generate_llm_risk_assessment(
         return f"- **Risk Level**: {urgency}\n- **Likelihood**: Medium\n- **Impact**: Moderate"
     prompt = LLM_PROMPTS["risk_assessment"].format(text=text[:4000])
     result = get_ollama_response(prompt, conn=conn, max_tokens=2000)
-    return result or f"- **Risk Level**: {urgency}\n- **Likelihood**: Medium\n- **Impact**: Moderate"
+    return (
+        result or f"- **Risk Level**: {urgency}\n- **Likelihood**: Medium\n- **Impact**: Moderate"
+    )
 
 
 def get_updates_since_days(conn: sqlite3.Connection, days: int) -> list[dict]:
@@ -411,7 +413,7 @@ def main() -> None:
 
     print("=" * 80)
 
-    for i, update in enumerate(updates, 1):
+    for update in updates:
         alert = format_alert(update, args.audience, use_llm, conn)
         print(alert)
         print("\n" + "=" * 80 + "\n")

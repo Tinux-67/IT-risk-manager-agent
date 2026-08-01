@@ -72,7 +72,7 @@ Dit project board volgt de **aanbevolen implementatie volgorde** uit de code rev
 |---------|------------------|------------|-----------|--------------|---------|
 | ✅ **Dockerfile** | `Dockerfile` aanwezig (multi-stage build) | ✅ **Done** | `docker`, `deployment` | - | - |
 | ⬜ **Health Checks** | Voeg health checks toe aan `docker-compose.yml` | ⬜ **Todo** | `docker`, `monitoring` | - | - |
-| ⬜ **Ollama Volume** | Maak Ollama model data persistent | ⬜ **Todo** | `docker`, `ollama` | - | - |
+| ✅ **Ollama Volume** | `ollama-data` volume aanwezig in `docker-compose.yml` | ✅ **Done** | `docker`, `ollama` | - | - |
 | ⬜ **Backup Script** | Voeg een backup mechanisme toe voor de database | ⬜ **Todo** | `deployment`, `database` | - | - |
 
 ---
@@ -80,12 +80,12 @@ Dit project board volgt de **aanbevolen implementatie volgorde** uit de code rev
 ### **⚫ Milestone 5: Veiligheid & Documentatie** *(Week 4)*
 **Doel:** Veiligheid verbeteren en documentatie bijwerken.
 **Prioriteit:** ⭐⭐⭐
-**Status:** ⬜ **Not Started**
+**Status:** 🟡 **In Progress** (2/4 taken voltooid)
 
 | **Taak** | **Beschrijving** | **Status** | **Labels** | **Assignee** | **PR** |
 |---------|------------------|------------|-----------|--------------|---------|
-| ⬜ **URL Validatie** | Voeg SSRF preventie toe in scrapers | ⬜ **Todo** | `security`, `scraping` | - | - |
-| ⬜ **Secrets Management** | Voeg `.env.example` toe en gebruik GitHub Secrets | ⬜ **Todo** | `security`, `config` | - | - |
+| ✅ **URL Validatie** | `is_allowed_url()` + `_ALLOWED_HOSTNAMES` in `scraping_utils.py` | ✅ **Done** | `security`, `scraping` | - | refactor/optimizations |
+| ✅ **Secrets Management** | `.env.example` aanwezig in repo root | ✅ **Done** | `security`, `config` | - | - |
 | ⬜ **ARCHITECTURE.md** | Voeg architectuur diagram toe | ⬜ **Todo** | `documentation` | - | - |
 | ⬜ **CONTRIBUTING.md** | Voeg bijdrage gids toe | ⬜ **Todo** | `documentation` | - | - |
 
@@ -98,9 +98,9 @@ Dit project board volgt de **aanbevolen implementatie volgorde** uit de code rev
 | 🟢 Milestone 1 | 4 | 4 | 100% ✅ |
 | 🟡 Milestone 2 | 4 | 4 | 100% ✅ |
 | 🔵 Milestone 3 | 4 | 0 | 0% |
-| 🟣 Milestone 4 | 4 | 1 | 25% |
-| ⚫ Milestone 5 | 4 | 0 | 0% |
-| **Totaal** | **20** | **9** | **45%** |
+| 🟣 Milestone 4 | 4 | 2 | 50% |
+| ⚫ Milestone 5 | 4 | 2 | 50% |
+| **Totaal** | **20** | **12** | **60%** |
 
 ---
 

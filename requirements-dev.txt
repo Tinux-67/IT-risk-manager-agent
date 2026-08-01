@@ -1,20 +1,8 @@
-# Development dependencies for IT Risk Manager Agent
+-r requirements.txt
 
-# Testing
-pytest>=7.0.0
-pytest-cov>=4.0.0
-
-# PDF processing (for tests)
-PyPDF2>=3.0.0
-python-docx>=0.8.11
-
-# Linting and formatting
+# Extra dev tools
 ruff>=0.1.0
 black>=23.0.0
 isort>=5.12.0
-
-# Type checking (optional)
 mypy>=1.0.0
-
-# Code coverage
 coverage>=7.0.0

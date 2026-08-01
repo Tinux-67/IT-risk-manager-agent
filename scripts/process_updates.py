@@ -5,25 +5,19 @@ Extracts metadata, text, and categorizes updates by risk area using Ollama (Mist
 """
 
 import argparse
-import hashlib
 import os
 import re
 import sqlite3
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from loguru import logger
 
 from config import Config
+from scripts.llm_utils import get_ollama_response, init_ollama_cache
+from scripts.logging_config import setup_logging
 
-# Configure logging
-logger.add(
-    Config.get_log_file(),
-    rotation=Config.LOG_ROTATION,
-    retention=Config.LOG_RETENTION,
-    level=Config.LOG_LEVEL,
-    format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {file}:{line} | {message}",
-)
+setup_logging()
 
 # LLM Prompts for Ollama
 LLM_PROMPTS = {
@@ -62,110 +56,6 @@ LLM_PROMPTS = {
     Summary:
     """,
 }
-
-# Cache configuration
-OLLAMA_CACHE_EXPIRY_HOURS = 1
-
-
-def get_cache_key(prompt: str, model: str) -> str:
-    """Generate a unique cache key for the prompt and model combination."""
-    combined = f"{model}:{prompt}"
-    return hashlib.sha256(combined.encode()).hexdigest()
-
-
-def init_ollama_cache(conn: sqlite3.Connection) -> None:
-    """Initialize the Ollama cache table in the database."""
-    cursor = conn.cursor()
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS ollama_cache (
-            cache_key TEXT PRIMARY KEY,
-            model TEXT NOT NULL,
-            prompt TEXT NOT NULL,
-            response TEXT NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            expires_at TIMESTAMP
-        )
-    """)
-    conn.commit()
-
-
-def get_cached_response(conn: sqlite3.Connection, prompt: str, model: str) -> str | None:
-    """
-    Get a cached Ollama response from the database.
-    Returns the cached response if valid and not expired, None otherwise.
-    """
-    cache_key = get_cache_key(prompt, model)
-    cursor = conn.cursor()
-
-    cursor.execute(
-        "SELECT response FROM ollama_cache WHERE cache_key = ? AND expires_at > CURRENT_TIMESTAMP",
-        (cache_key,),
-    )
-    result = cursor.fetchone()
-    return result[0] if result else None
-
-
-def cache_response(conn: sqlite3.Connection, prompt: str, model: str, response: str) -> None:
-    """Cache an Ollama response in the database with expiry."""
-    cache_key = get_cache_key(prompt, model)
-    expires_at = (datetime.now() + timedelta(hours=OLLAMA_CACHE_EXPIRY_HOURS)).strftime(
-        "%Y-%m-%d %H:%M:%S"
-    )
-
-    cursor = conn.cursor()
-    cursor.execute(
-        """
-        INSERT OR REPLACE INTO ollama_cache (cache_key, model, prompt, response, expires_at)
-        VALUES (?, ?, ?, ?, ?)
-        """,
-        (cache_key, model, prompt, response, expires_at),
-    )
-    conn.commit()
-    logger.debug(f"Cached Ollama response for prompt (key: {cache_key[:8]}...)")
-
-
-def get_ollama_response(
-    prompt: str, model: str = Config.OLLAMA_MODEL, conn: sqlite3.Connection | None = None
-) -> str | None:
-    """
-    Get a response from Ollama's LLM (Mistral-7B by default).
-    Uses database caching to avoid duplicate API calls.
-    Returns the generated text or None if Ollama is not available.
-
-    Args:
-        prompt: The prompt to send to Ollama
-        model: The model to use (default: Config.OLLAMA_MODEL)
-        conn: Optional SQLite connection for caching
-    """
-    # Try to get from cache first if connection is provided
-    if conn:
-        cached = get_cached_response(conn, prompt, model)
-        if cached:
-            logger.debug("Returning cached Ollama response")
-            return cached
-
-    try:
-        import ollama
-
-        logger.debug(f"Generating LLM response for prompt (length: {len(prompt)} chars)")
-        response = ollama.generate(
-            model=model,
-            prompt=prompt,
-            options={"temperature": 0.1, "max_tokens": 200},
-        )
-        response_text = response["response"].strip()
-
-        # Cache the response if connection is provided
-        if conn and response_text:
-            cache_response(conn, prompt, model, response_text)
-
-        return response_text
-    except ImportError:
-        logger.warning("Ollama is not installed. Install with: pip install ollama")
-        return None
-    except Exception as e:
-        logger.error(f"Error generating LLM response: {e}")
-        return None
 
 
 def init_db() -> sqlite3.Connection:
@@ -206,6 +96,9 @@ def init_db() -> sqlite3.Connection:
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_urgency ON updates(urgency_level)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_is_processed ON updates(is_processed)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_source ON updates(source)")
+    cursor.execute(
+        "CREATE INDEX IF NOT EXISTS idx_source_risk_area ON updates(source, risk_area)"
+    )
 
     # Initialize Ollama cache table
     init_ollama_cache(conn)
@@ -262,16 +155,35 @@ def extract_text_from_docx(file_path: str) -> str:
         return ""
 
 
+def extract_text_from_excel(file_path: str) -> str:
+    """Extract text from an Excel file using pandas."""
+    try:
+        import pandas as pd
+
+        logger.debug(f"Extracting text from Excel: {file_path}")
+        dfs = pd.read_excel(file_path, sheet_name=None)
+        parts = []
+        for sheet_name, df in dfs.items():
+            parts.append(f"[Sheet: {sheet_name}]")
+            parts.append(df.to_string(index=False))
+        return "\n".join(parts)
+    except ImportError:
+        logger.warning("pandas not installed. Install with: pip install pandas openpyxl")
+        return ""
+    except Exception as e:
+        logger.error(f"Error reading Excel {file_path}: {e}")
+        return ""
+
+
 def categorize_risk_area(text: str, conn: sqlite3.Connection | None = None) -> str:
     """Categorize the update based on keywords or LLM."""
     # Try LLM first if available
-    use_llm = True
-    if use_llm and text:
+    if text:
         risk_areas_str = ", ".join(Config.RISK_AREAS)
         prompt = LLM_PROMPTS["categorize"].format(
-            risk_areas=risk_areas_str, text=text[:4000]  # Limit input length
+            risk_areas=risk_areas_str, text=text[:4000]
         )
-        llm_response = get_ollama_response(prompt, Config.OLLAMA_MODEL, conn)
+        llm_response = get_ollama_response(prompt, conn=conn)
         if llm_response and llm_response in Config.RISK_AREAS + ["Other"]:
             logger.debug(f"LLM categorized as: {llm_response}")
             return llm_response
@@ -297,10 +209,9 @@ def categorize_risk_area(text: str, conn: sqlite3.Connection | None = None) -> s
 def assess_urgency(text: str, conn: sqlite3.Connection | None = None) -> str:
     """Assess urgency level based on keywords or LLM."""
     # Try LLM first if available
-    use_llm = True
-    if use_llm and text:
+    if text:
         prompt = LLM_PROMPTS["assess_urgency"].format(text=text[:4000])
-        llm_response = get_ollama_response(prompt, Config.OLLAMA_MODEL, conn)
+        llm_response = get_ollama_response(prompt, conn=conn)
         if llm_response and llm_response in ["Urgent", "High", "Medium", "Low"]:
             logger.debug(f"LLM assessed urgency as: {llm_response}")
             return llm_response
@@ -346,11 +257,9 @@ def assess_urgency(text: str, conn: sqlite3.Connection | None = None) -> str:
 
 def generate_summary(text: str, conn: sqlite3.Connection | None = None) -> str:
     """Generate a summary using LLM or fallback to first paragraph."""
-    # Try LLM first if available
-    use_llm = True
-    if use_llm and text and len(text) > 50:
+    if text and len(text) > 50:
         prompt = LLM_PROMPTS["summarize"].format(text=text[:4000])
-        llm_response = get_ollama_response(prompt, Config.OLLAMA_MODEL, conn)
+        llm_response = get_ollama_response(prompt, conn=conn)
         if llm_response:
             logger.debug("Generated LLM summary")
             return llm_response
@@ -373,7 +282,6 @@ def determine_source(file_path: str) -> str:
     elif "eba" in file_path.lower():
         return "EBA"
     else:
-        # Default to EBA for backward compatibility
         return "EBA"
 
 
@@ -401,9 +309,7 @@ def process_file(file_path: str, conn: sqlite3.Connection) -> tuple[bool, str]:
         elif file_path.endswith(".html") or file_path.endswith(".htm"):
             raw_text = extract_text_from_html(file_path)
         elif file_path.endswith(".xlsx") or file_path.endswith(".xls"):
-            # For Excel files, we'd need openpyxl or pandas
-            raw_text = "[Excel file - text extraction not implemented]"
-            logger.warning(f"Excel file detected, text extraction not implemented: {file_path}")
+            raw_text = extract_text_from_excel(file_path)
         elif file_path.endswith(".docx") or file_path.endswith(".doc"):
             raw_text = extract_text_from_docx(file_path)
         else:
@@ -460,23 +366,33 @@ def process_file(file_path: str, conn: sqlite3.Connection) -> tuple[bool, str]:
         return False, filename
 
 
+def _process_file_worker(file_path: str) -> tuple[bool, str]:
+    """
+    Worker function for parallel processing.
+    Opens its own SQLite connection to avoid thread-safety issues.
+    """
+    worker_conn = sqlite3.connect(Config.DB_PATH)
+    try:
+        return process_file(file_path, worker_conn)
+    finally:
+        worker_conn.close()
+
+
 def process_files_parallel(
     file_paths: list[str], conn: sqlite3.Connection, max_workers: int = 4
 ) -> dict[str, bool]:
     """
     Process multiple files in parallel using ThreadPoolExecutor.
+    Each worker opens its own SQLite connection for thread safety.
     Returns a dictionary mapping filenames to success status.
     """
     results = {}
 
-    def process_wrapper(file_path: str) -> tuple[bool, str]:
-        """Wrapper function for parallel processing."""
-        return process_file(file_path, conn)
-
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        # Submit all tasks
+        # Submit all tasks — each worker gets its own connection via _process_file_worker
         future_to_file = {
-            executor.submit(process_wrapper, file_path): file_path for file_path in file_paths
+            executor.submit(_process_file_worker, file_path): file_path
+            for file_path in file_paths
         }
 
         # Process completed futures as they come in
@@ -602,10 +518,9 @@ def main():
     # Disable LLM if requested
     if args.no_llm:
         logger.warning("LLM (Ollama) disabled by user request")
-        global get_ollama_response
+        import scripts.llm_utils as _llm_utils
 
-        def get_ollama_response(*args, **kwargs):
-            return None
+        _llm_utils.get_ollama_response = lambda *a, **kw: None  # type: ignore[method-assign]
 
     conn = init_db()
 

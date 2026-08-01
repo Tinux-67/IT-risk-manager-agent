@@ -14,15 +14,20 @@ from bs4 import BeautifulSoup
 from loguru import logger
 
 from config import Config
+from scripts.logging_config import setup_logging
 
-# Configure logging with dynamic log file
-logger.add(
-    Config.get_log_file(),
-    rotation=Config.LOG_ROTATION,
-    retention=Config.LOG_RETENTION,
-    level=Config.LOG_LEVEL,
-    format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {file}:{line} | {message}",
-)
+setup_logging()
+
+_ALLOWED_HOSTNAMES = {"eba.europa.eu", "www.eba.europa.eu", "mas.gov.sg", "www.mas.gov.sg"}
+
+
+def is_allowed_url(url: str) -> bool:
+    """Return True only if the URL's hostname is in the allowlist."""
+    from urllib.parse import urlparse
+    try:
+        return (urlparse(url).hostname or "") in _ALLOWED_HOSTNAMES
+    except Exception:
+        return False
 
 
 def get_session() -> requests.Session:
@@ -125,6 +130,10 @@ def download_file(
     Returns:
         bool: True if download succeeded, False otherwise.
     """
+    if not is_allowed_url(url):
+        logger.error(f"SSRF protection: URL not in allowlist: {url}")
+        return False
+
     try:
         if session is None:
             session = get_session()
@@ -237,6 +246,11 @@ def save_raw_update(
     Returns:
         str: Path to the saved file, or empty string if failed.
     """
+    # SSRF protection: validate URL before fetching
+    if not is_allowed_url(update["url"]):
+        logger.error(f"SSRF protection: URL not in allowlist: {update['url']}")
+        return ""
+
     # Determine file extension from URL
     extension = get_file_extension(update["url"])
 

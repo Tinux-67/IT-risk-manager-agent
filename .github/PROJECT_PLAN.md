@@ -1,7 +1,9 @@
 # 📋 IT Risk Manager Agent - Refactoring & Optimizations Project Plan
 
+**Laatste Refactoring:** refactor/optimizations branch (2026-08-01)
+
 > **Project Board:** [IT Risk Manager Agent - Refactoring & Optimizations](https://github.com/Tinux-67/IT-risk-manager-agent/projects)
-> **Status:** 🟡 **In Progress** (Week 1: Code Kwaliteit & Bugfixes)
+> **Status:** 🟢 **Milestones 1 & 2 Complete**
 
 ---
 
@@ -22,28 +24,28 @@ Dit project board volgt de **aanbevolen implementatie volgorde** uit de code rev
 ### **🟢 Milestone 1: Code Kwaliteit & Bugfixes** *(Week 1)*
 **Doel:** Duplicatie verwijderen, logging fixen, configuratie verbeteren.
 **Prioriteit:** ⭐⭐⭐⭐⭐
-**Status:** ⚠️ **In Progress** (1/4 taken voltooid)
+**Status:** ✅ **Complete** (4/4 taken voltooid)
 
 | **Taak** | **Beschrijving** | **Status** | **Labels** | **Assignee** | **PR** |
 |---------|------------------|------------|-----------|--------------|---------|
 | ✅ **Scraping Utils Refactor** | Maak `scraping_utils.py` voor gedeelde functies in `scrape_eba.py` en `scrape_mas.py` | ✅ **Done** | `refactor`, `scraping` | - | [#2](https://github.com/Tinux-67/IT-risk-manager-agent/pull/2) |
-| ⬜ **Fix Logging Configuratie** | Fix `{time}` in `LOG_FILE` (dynamische bestandsnamen) | ⬜ **Todo** | `bug`, `logging` | - | - |
-| ⬜ **Environment Variables** | Voeg `.env.example` toe en gebruik `os.getenv()` in `config.py` | ⬜ **Todo** | `enhancement`, `config` | - | - |
-| ⬜ **Pre-commit Hooks** | Voeg `ruff`, `black`, `isort`, `mypy` hooks toe | ⬜ **Todo** | `testing`, `ci` | - | - |
+| ✅ **Fix Logging Configuratie** | Centralized `logging_config.py` met idempotente `setup_logging()` | ✅ **Done** | `bug`, `logging` | - | refactor/optimizations |
+| ✅ **Environment Variables** | `.env.example` aanwezig, `os.getenv()` gebruikt in `config.py` | ✅ **Done** | `enhancement`, `config` | - | - |
+| ✅ **Pre-commit Hooks** | `.pre-commit-config.yaml` aanwezig met `ruff`, `black`, `isort` | ✅ **Done** | `testing`, `ci` | - | - |
 
 ---
 
 ### **🟡 Milestone 2: Prestatie Optimalisaties** *(Week 2)*
 **Doel:** Snelheid verbeteren voor grote datasets.
 **Prioriteit:** ⭐⭐⭐⭐
-**Status:** ⬜ **Not Started**
+**Status:** ✅ **Complete** (4/4 taken voltooid)
 
 | **Taak** | **Beschrijving** | **Status** | **Labels** | **Assignee** | **PR** |
 |---------|------------------|------------|-----------|--------------|---------|
-| ⬜ **Parallelle Verwerking** | Gebruik `ThreadPoolExecutor` in `process_updates.py` | ⬜ **Todo** | `performance`, `refactor` | - | - |
-| ⬜ **Ollama Caching** | Voeg `requests-cache` toe voor Ollama API calls | ⬜ **Todo** | `performance`, `llm` | - | - |
-| ⬜ **Database Indexes** | Voeg ontbrekende indexes toe (bv. `idx_source_risk_area`) | ⬜ **Todo** | `database`, `performance` | - | - |
-| ⬜ **Streamlit Caching** | Verbeter caching in `app.py` (singleton DB connectie) | ⬜ **Todo** | `performance`, `streamlit` | - | - |
+| ✅ **Parallelle Verwerking** | `ThreadPoolExecutor` met per-thread SQLite connecties (thread-safe) | ✅ **Done** | `performance`, `refactor` | - | refactor/optimizations |
+| ✅ **Ollama Caching** | SQLite-backed 24h TTL cache via `llm_utils.py` | ✅ **Done** | `performance`, `llm` | - | refactor/optimizations |
+| ✅ **Database Indexes** | `idx_source_risk_area` composite index toegevoegd | ✅ **Done** | `database`, `performance` | - | refactor/optimizations |
+| ✅ **Streamlit Caching** | `@st.cache_data(ttl=300)` en geoptimaliseerde dashboard query | ✅ **Done** | `performance`, `streamlit` | - | refactor/optimizations |
 
 ---
 
@@ -68,7 +70,7 @@ Dit project board volgt de **aanbevolen implementatie volgorde** uit de code rev
 
 | **Taak** | **Beschrijving** | **Status** | **Labels** | **Assignee** | **PR** |
 |---------|------------------|------------|-----------|--------------|---------|
-| ⬜ **Dockerfile** | Voeg een `Dockerfile` toe (multi-stage build) | ⬜ **Todo** | `docker`, `deployment` | - | - |
+| ✅ **Dockerfile** | `Dockerfile` aanwezig (multi-stage build) | ✅ **Done** | `docker`, `deployment` | - | - |
 | ⬜ **Health Checks** | Voeg health checks toe aan `docker-compose.yml` | ⬜ **Todo** | `docker`, `monitoring` | - | - |
 | ⬜ **Ollama Volume** | Maak Ollama model data persistent | ⬜ **Todo** | `docker`, `ollama` | - | - |
 | ⬜ **Backup Script** | Voeg een backup mechanisme toe voor de database | ⬜ **Todo** | `deployment`, `database` | - | - |
@@ -93,12 +95,12 @@ Dit project board volgt de **aanbevolen implementatie volgorde** uit de code rev
 
 | **Milestone** | **Taken** | **Voltooid** | **Voortgang** |
 |--------------|----------|--------------|---------------|
-| 🟢 Milestone 1 | 4 | 1 | 25% |
-| 🟡 Milestone 2 | 4 | 0 | 0% |
+| 🟢 Milestone 1 | 4 | 4 | 100% ✅ |
+| 🟡 Milestone 2 | 4 | 4 | 100% ✅ |
 | 🔵 Milestone 3 | 4 | 0 | 0% |
-| 🟣 Milestone 4 | 4 | 0 | 0% |
+| 🟣 Milestone 4 | 4 | 1 | 25% |
 | ⚫ Milestone 5 | 4 | 0 | 0% |
-| **Totaal** | **20** | **1** | **5%** |
+| **Totaal** | **20** | **9** | **45%** |
 
 ---
 
@@ -139,5 +141,5 @@ Voeg voor elke taak in de bovenstaande tabel een **Issue** toe en voeg deze toe 
 
 ---
 
-**Laatste update:** 2026-07-26
+**Laatste update:** 2026-08-01
 **Beheerder:** @Tinux-67

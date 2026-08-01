@@ -17,6 +17,7 @@ from bs4 import BeautifulSoup
 from loguru import logger
 
 from config import Config
+from scripts.logging_config import setup_logging
 from scripts.scraping_utils import (
     build_url,
     extract_date_from_filename,
@@ -29,14 +30,7 @@ from scripts.scraping_utils import (
 # Ensure raw data directory exists
 os.makedirs(Config.EBA_RAW_DATA_DIR, exist_ok=True)
 
-# Configure logging with dynamic log file
-logger.add(
-    Config.get_log_file(),
-    rotation=Config.LOG_ROTATION,
-    retention=Config.LOG_RETENTION,
-    level=Config.LOG_LEVEL,
-    format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {file}:{line} | {message}",
-)
+setup_logging()
 
 
 def build_eba_url(params: dict = None) -> str:

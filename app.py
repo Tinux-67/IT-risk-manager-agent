@@ -14,15 +14,9 @@ import streamlit as st
 from loguru import logger
 
 from config import Config
+from scripts.logging_config import setup_logging
 
-# Configure logging
-logger.add(
-    Config.get_log_file(),
-    rotation=Config.LOG_ROTATION,
-    retention=Config.LOG_RETENTION,
-    level=Config.LOG_LEVEL,
-    format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {file}:{line} | {message}",
-)
+setup_logging()
 logger.info("Starting Streamlit application")
 
 # Constants
@@ -321,6 +315,10 @@ def display_scrape_and_process() -> None:
 
         if st.button("\ud83d\ude80 Start Scraping"):
             with st.spinner("Scraping EBA website..."):
+                # Input validation: document_type must be numeric
+                if not document_type.strip().isdigit():
+                    st.error("Document type must be a numeric value (e.g. 248).")
+                    return
                 success, output = run_script(
                     "scrape_eba.py",
                     [
@@ -329,7 +327,7 @@ def display_scrape_and_process() -> None:
                         "--delay",
                         str(delay),
                         "--document-type",
-                        document_type,
+                        document_type.strip(),
                     ],
                 )
                 if success:
@@ -365,19 +363,21 @@ def display_dashboard() -> None:
 
     conn = get_db_connection()
 
-    # Get metrics
+    # Get metrics — single query for performance
     cursor = conn.cursor()
-    cursor.execute("SELECT COUNT(*) FROM updates WHERE is_processed = 1")
-    total_updates = cursor.fetchone()[0]
-
-    cursor.execute("SELECT COUNT(*) FROM updates WHERE urgency_level = 'Urgent'")
-    urgent_count = cursor.fetchone()[0]
-
-    cursor.execute("SELECT COUNT(*) FROM updates WHERE urgency_level = 'High'")
-    high_count = cursor.fetchone()[0]
-
-    cursor.execute("SELECT COUNT(*) FROM updates WHERE publication_date >= date('now', '-7 days')")
-    recent_count = cursor.fetchone()[0]
+    cursor.execute("""
+        SELECT
+            COUNT(*) AS total,
+            SUM(CASE WHEN urgency_level='Urgent' THEN 1 ELSE 0 END) AS urgent,
+            SUM(CASE WHEN urgency_level='High' THEN 1 ELSE 0 END) AS high,
+            SUM(CASE WHEN publication_date >= date('now','-7 days') THEN 1 ELSE 0 END) AS recent
+        FROM updates WHERE is_processed = 1
+    """)
+    row = cursor.fetchone()
+    total_updates = row[0] or 0
+    urgent_count = row[1] or 0
+    high_count = row[2] or 0
+    recent_count = row[3] or 0
 
     # Display metrics
     col1, col2, col3, col4 = st.columns(4)

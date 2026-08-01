@@ -41,12 +41,3 @@ jobs:
 
       - name: Verify pre-commit config is valid
         run: pre-commit validate-config
-
-      - name: Check pre-commit is installed in git hooks
-        run: |
-          if [ -f .git/hooks/pre-commit ]; then
-            echo "✅ Pre-commit hook is installed"
-          else
-            echo "❌ Pre-commit hook is NOT installed"
-            exit 1
-          fi

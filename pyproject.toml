@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 license = {text = "MIT"}
 authors = [
-    {name = "Tinux-67", email = "your.email@example.com"}
+    {name = "Tinux-67", email = "kosmopoliti@pm.me"}
 ]
 keywords = ["eba", "regulatory", "compliance", "risk-management", "llm"]
 classifiers = [

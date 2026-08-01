@@ -169,7 +169,9 @@ class TestDownloadFile:
 
         from scripts.scraping_utils import download_file
 
-        result = download_file("http://example.com/test.pdf", "/tmp/test.pdf")
+        result = download_file(
+            "https://www.eba.europa.eu/sites/default/files/test.pdf", "/tmp/test.pdf"
+        )
 
         assert result is True
         mock_file.write.assert_called_with(b"test content")
@@ -183,7 +185,9 @@ class TestDownloadFile:
 
         from scripts.scraping_utils import download_file
 
-        result = download_file("http://example.com/test.pdf", "/tmp/test.pdf")
+        result = download_file(
+            "https://www.eba.europa.eu/sites/default/files/test.pdf", "/tmp/test.pdf"
+        )
 
         assert result is False
 
@@ -202,7 +206,7 @@ class TestSaveRawUpdate:
 
         update = {
             "title": "Test Document",
-            "url": "http://example.com/test.pdf",
+            "url": "https://www.eba.europa.eu/sites/default/files/test.pdf",
             "date": "2024-01-01",
             "source": "EBA",
         }
@@ -223,7 +227,7 @@ class TestSaveRawUpdate:
 
         update = {
             "title": "Test Document",
-            "url": "http://example.com/test.pdf",
+            "url": "https://www.eba.europa.eu/sites/default/files/test.pdf",
             "date": "2024-01-01",
             "source": "EBA",
         }

@@ -26,15 +26,6 @@ from scripts.process_updates import (
 
 
 @pytest.fixture
-def temp_db():
-    """Fixture to create a temporary database for testing."""
-    # Use in-memory database for testing
-    conn = sqlite3.connect(":memory:")
-    yield conn
-    conn.close()
-
-
-@pytest.fixture
 def sample_pdf_path(tmp_path):
     """Fixture to create a sample PDF file."""
     pdf_path = tmp_path / "sample.pdf"

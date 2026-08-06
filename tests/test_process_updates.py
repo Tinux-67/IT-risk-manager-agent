@@ -83,7 +83,7 @@ class TestExtractTextFromPdf:
 
     def test_extract_text_from_pdf_success(self, sample_pdf_path):
         """Test successful PDF text extraction."""
-        with patch("PyPDF2.PdfReader") as mock_pdf_reader:
+        with patch("pypdf.PdfReader") as mock_pdf_reader:
             mock_page = MagicMock()
             mock_page.extract_text.return_value = "Test PDF content"
             mock_reader = MagicMock()
@@ -95,7 +95,7 @@ class TestExtractTextFromPdf:
 
     def test_extract_text_from_pdf_import_error(self, sample_pdf_path):
         """Test PDF extraction with PyPDF2 not installed."""
-        with patch.dict("sys.modules", {"PyPDF2": None}):
+        with patch.dict("sys.modules", {"pypdf": None}):
             result = extract_text_from_pdf(sample_pdf_path)
             assert result == ""
 

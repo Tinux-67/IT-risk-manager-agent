@@ -11,11 +11,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements first to leverage Docker cache
-COPY requirements.txt .
+# Copy source (pyproject.toml replaces requirements.txt as single source of truth)
+COPY . .
 
-# Install Python dependencies
-RUN pip install --no-cache-dir --user -r requirements.txt
+# Install Python dependencies from pyproject.toml
+RUN pip install --no-cache-dir --user .
 
 # Production stage
 FROM python:3.11-slim

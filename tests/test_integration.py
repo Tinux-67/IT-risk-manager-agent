@@ -347,6 +347,7 @@ class TestDBSchema:
             "idx_is_processed",
             "idx_source",
             "idx_source_risk_area",
+            "idx_source_urgency",
         }
         missing = expected - indexes
         assert not missing, f"Missing indexes: {missing}"

@@ -312,7 +312,7 @@ def display_scrape_and_process() -> None:
         delay = st.slider("Delay between requests (seconds)", 0.0, 5.0, 1.0, 0.1)
         document_type = st.text_input("Document type filter", value="248")
 
-        if # Prevent concurrent scrape runs
+        # Prevent concurrent scrape runs
         if "scraping_running" not in st.session_state:
             st.session_state["scraping_running"] = False
 

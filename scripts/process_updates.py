@@ -97,6 +97,7 @@ def init_db() -> sqlite3.Connection:
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_is_processed ON updates(is_processed)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_source ON updates(source)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_source_risk_area ON updates(source, risk_area)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_source_urgency ON updates(source, urgency_level)")
 
     # Initialize Ollama cache table
     init_ollama_cache(conn)

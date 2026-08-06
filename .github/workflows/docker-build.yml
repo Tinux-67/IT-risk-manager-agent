@@ -6,6 +6,7 @@ on:
     tags: ["v*"]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
@@ -31,7 +32,7 @@ jobs:
         with:
           context: .
           file: ./Dockerfile
-          push: false  # Do not push for PRs, only build
+          push: false
           tags: ${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

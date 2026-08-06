@@ -109,14 +109,14 @@ def init_db() -> sqlite3.Connection:
 def extract_text_from_pdf(file_path: str) -> str:
     """Extract text from a PDF file."""
     try:
-        from PyPDF2 import PdfReader
+        from pypdf import PdfReader
 
         logger.debug(f"Extracting text from PDF: {file_path}")
         reader = PdfReader(file_path)
         text = "\n".join([page.extract_text() for page in reader.pages])
         return text
     except ImportError:
-        logger.warning("PyPDF2 not installed. Install with: pip install PyPDF2")
+        logger.warning("pypdf not installed. Install with: pip install pypdf")
         return ""
     except Exception as e:
         logger.error(f"Error reading PDF {file_path}: {e}")

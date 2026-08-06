@@ -68,7 +68,8 @@ def sanitize_filename(filename: str) -> str:
     filename = re.sub(r'[\\/*?:"<>|]', "_", filename)
     # Replace multiple spaces with single space
     filename = re.sub(r"\s+", " ", filename).strip()
-    return filename
+    # Truncate to 200 chars to stay well within the 255-char OS limit
+    return filename[:200]
 
 
 def extract_date_from_url(url: str) -> str:

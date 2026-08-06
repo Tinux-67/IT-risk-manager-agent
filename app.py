@@ -274,13 +274,12 @@ def display_alert_generator() -> None:
             logger.info(f"Generating alerts for {len(updates)} updates")
 
             # Generate alerts for each update
+            from scripts.generate_alerts import format_alert  # noqa: PLC0415
             for i, update in enumerate(updates, 1):
                 with st.expander(f"Alert {i}: {update['title']}", expanded=True):
                     # Simulate the alert generation
                     if use_llm:
                         try:
-                            from scripts.generate_alerts import format_alert
-
                             alert = format_alert(update, audience, use_llm=True)
                             st.markdown(alert)
                         except Exception as e:
@@ -313,10 +312,16 @@ def display_scrape_and_process() -> None:
         delay = st.slider("Delay between requests (seconds)", 0.0, 5.0, 1.0, 0.1)
         document_type = st.text_input("Document type filter", value="248")
 
-        if st.button("\ud83d\ude80 Start Scraping"):
+        if # Prevent concurrent scrape runs
+        if "scraping_running" not in st.session_state:
+            st.session_state["scraping_running"] = False
+
+        if st.button("\ud83d\ude80 Start Scraping", disabled=st.session_state["scraping_running"]):
+            st.session_state["scraping_running"] = True
             with st.spinner("Scraping EBA website..."):
                 # Input validation: document_type must be numeric
                 if not document_type.strip().isdigit():
+                    st.session_state["scraping_running"] = False
                     st.error("Document type must be a numeric value (e.g. 248).")
                     return
                 success, output = run_script(
@@ -337,6 +342,7 @@ def display_scrape_and_process() -> None:
                 else:
                     logger.error(f"Scraping failed: {output}")
                     st.error(f"Scraping failed:\n{output}")
+            st.session_state["scraping_running"] = False
 
     with col2:
         st.markdown("### \ud83d\udcc1 Process Updates")

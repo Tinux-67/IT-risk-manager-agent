@@ -1,6 +1,6 @@
 # IT Risk Manager Agent
 
-A **CLI-based agent** for tracking and interpreting EBA and MAS regulations, powered by **Mistral-7B** and **SQLite**.
+A **CLI and web-based agent** for tracking and interpreting EBA and MAS regulations, powered by **Mistral-7B** and **SQLite**.
 
 [![Test](https://github.com/Tinux-67/IT-risk-manager-agent/actions/workflows/test.yml/badge.svg)](https://github.com/Tinux-67/IT-risk-manager-agent/actions/workflows/test.yml)
 [![Lint](https://github.com/Tinux-67/IT-risk-manager-agent/actions/workflows/lint.yml/badge.svg)](https://github.com/Tinux-67/IT-risk-manager-agent/actions/workflows/lint.yml)

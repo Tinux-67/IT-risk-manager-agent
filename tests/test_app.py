@@ -38,7 +38,7 @@ def _make_streamlit_stub() -> types.ModuleType:
     st.stop = MagicMock()
     # Other st.* used inside functions -- provide no-op mocks
     for name in (
-        "cache_data", "button", "expander", "columns", "text_area",
+        "cache_data", "cache_resource", "button", "expander", "columns", "text_area",
         "info", "session_state", "rerun", "sidebar", "title", "header",
         "subheader", "write", "success", "warning", "spinner", "selectbox",
         "multiselect", "slider", "checkbox", "radio", "text_input",
@@ -62,6 +62,13 @@ def _make_streamlit_stub() -> types.ModuleType:
         return lambda fn: fn  # @st.cache_data(ttl=...)
 
     st.cache_data = _cache_data_decorator
+
+    def _cache_resource_decorator(*args, **kwargs):
+        if args and callable(args[0]):
+            return args[0]  # @st.cache_resource (no args)
+        return lambda fn: fn  # @st.cache_resource(...)
+
+    st.cache_resource = _cache_resource_decorator
     return st
 
 

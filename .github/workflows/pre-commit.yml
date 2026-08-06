@@ -22,9 +22,7 @@ jobs:
         with:
           python-version: "3.11"
           cache: "pip"
-          cache-dependency-path: |
-            requirements-dev.txt
-            pyproject.toml
+          cache-dependency-path: pyproject.toml
 
       - name: Install pre-commit
         run: |

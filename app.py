@@ -72,14 +72,16 @@ st.markdown(
 )
 
 
+@st.cache_resource
 def get_db_connection() -> sqlite3.Connection:
-    """Get a connection to the SQLite database."""
+    """Get a cached connection to the SQLite database."""
     if not os.path.exists(DB_PATH):
         logger.error(f"Database not found at {DB_PATH}. Please run `process_updates.py` first.")
         st.error(f"Database not found at {DB_PATH}. Please run `process_updates.py` first.")
         st.stop()
     logger.debug(f"Connecting to database at {DB_PATH}")
-    return sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
+    return conn
 
 
 def run_script(script_name: str, args: list[str] | None = None) -> tuple[bool, str]:
@@ -174,6 +176,14 @@ def get_urgency_levels(_conn: sqlite3.Connection) -> list[str]:
     cursor = _conn.cursor()
     cursor.execute("SELECT DISTINCT urgency_level FROM updates WHERE urgency_level IS NOT NULL")
     return [row[0] for row in cursor.fetchall() if row[0]]
+
+
+def clear_data_caches() -> None:
+    """Invalidate all data caches after scraping or processing runs."""
+    get_updates.clear()
+    get_risk_areas.clear()
+    get_urgency_levels.clear()
+    logger.debug("Data caches cleared")
 
 
 def display_update_card(update: dict) -> None:
@@ -296,7 +306,6 @@ def display_alert_generator() -> None:
                             f"**Summary:** {update.get('summary', 'No summary available.')}"
                         )
 
-    conn.close()
 
 
 def display_scrape_and_process() -> None:
@@ -339,6 +348,7 @@ def display_scrape_and_process() -> None:
                     logger.success("Scraping completed successfully")
                     st.success("Scraping completed successfully!")
                     st.text(output)
+                    clear_data_caches()
                 else:
                     logger.error(f"Scraping failed: {output}")
                     st.error(f"Scraping failed:\n{output}")
@@ -354,6 +364,7 @@ def display_scrape_and_process() -> None:
                     logger.success("Processing completed successfully")
                     st.success("Processing completed successfully!")
                     st.text(output)
+                    clear_data_caches()
                 else:
                     logger.error(f"Processing failed: {output}")
                     st.error(f"Processing failed:\n{output}")
@@ -397,7 +408,6 @@ def display_dashboard() -> None:
     with col4:
         st.metric("Recent (7d)", recent_count)
 
-    conn.close()
 
 
 def main() -> None:
@@ -474,7 +484,6 @@ def main() -> None:
             for update in updates:
                 display_update_card(update)
 
-        conn.close()
 
     elif st.session_state["page"] == "Detail View":
         if st.session_state["selected_update"]:

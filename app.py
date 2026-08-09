@@ -285,6 +285,7 @@ def display_alert_generator() -> None:
 
             # Generate alerts for each update
             from scripts.generate_alerts import format_alert  # noqa: PLC0415
+
             for i, update in enumerate(updates, 1):
                 with st.expander(f"Alert {i}: {update['title']}", expanded=True):
                     # Simulate the alert generation
@@ -305,7 +306,6 @@ def display_alert_generator() -> None:
                         st.markdown(
                             f"**Summary:** {update.get('summary', 'No summary available.')}"
                         )
-
 
 
 def display_scrape_and_process() -> None:
@@ -409,7 +409,6 @@ def display_dashboard() -> None:
         st.metric("Recent (7d)", recent_count)
 
 
-
 def main() -> None:
     """Main function for the Streamlit app."""
     logger.info("Streamlit app main function started")
@@ -483,7 +482,6 @@ def main() -> None:
             st.info(f"Found {len(updates)} updates")
             for update in updates:
                 display_update_card(update)
-
 
     elif st.session_state["page"] == "Detail View":
         if st.session_state["selected_update"]:

@@ -12,7 +12,6 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 
-
 # ---------------------------------------------------------------------------
 # Database fixtures
 # ---------------------------------------------------------------------------
@@ -94,8 +93,11 @@ def mock_ollama_none():
 def mock_ollama_timeout():
     """Mock Ollama to raise a timeout error."""
     import requests
-    with patch("scripts.llm_utils.get_ollama_response",
-               side_effect=requests.exceptions.Timeout("Ollama timed out")) as m:
+
+    with patch(
+        "scripts.llm_utils.get_ollama_response",
+        side_effect=requests.exceptions.Timeout("Ollama timed out"),
+    ) as m:
         yield m
 
 
@@ -103,16 +105,21 @@ def mock_ollama_timeout():
 def mock_ollama_connection_error():
     """Mock Ollama to raise a connection error."""
     import requests
-    with patch("scripts.llm_utils.get_ollama_response",
-               side_effect=requests.exceptions.ConnectionError("Ollama unreachable")) as m:
+
+    with patch(
+        "scripts.llm_utils.get_ollama_response",
+        side_effect=requests.exceptions.ConnectionError("Ollama unreachable"),
+    ) as m:
         yield m
 
 
 @pytest.fixture()
 def mock_ollama_value_error():
     """Mock Ollama to raise a ValueError (unexpected response format)."""
-    with patch("scripts.llm_utils.get_ollama_response",
-               side_effect=ValueError("Unexpected Ollama response")) as m:
+    with patch(
+        "scripts.llm_utils.get_ollama_response",
+        side_effect=ValueError("Unexpected Ollama response"),
+    ) as m:
         yield m
 
 

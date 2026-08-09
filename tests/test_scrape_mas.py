@@ -254,9 +254,30 @@ class TestScrapeAllMas:
     @patch("scripts.scrape_mas.scrape_mas_consultations")
     @patch("scripts.scrape_mas.scrape_mas_publications")
     def test_combines_all_sources(self, mock_pub, mock_con, mock_reg):
-        mock_pub.return_value = [{"title": "A", "url": "https://mas.gov.sg/a", "date": "2024-01", "source": "MAS_Publications"}]
-        mock_con.return_value = [{"title": "B", "url": "https://mas.gov.sg/b", "date": "2024-02", "source": "MAS_Consultations"}]
-        mock_reg.return_value = [{"title": "C", "url": "https://mas.gov.sg/c", "date": "2024-03", "source": "MAS_Regulations"}]
+        mock_pub.return_value = [
+            {
+                "title": "A",
+                "url": "https://mas.gov.sg/a",
+                "date": "2024-01",
+                "source": "MAS_Publications",
+            }
+        ]
+        mock_con.return_value = [
+            {
+                "title": "B",
+                "url": "https://mas.gov.sg/b",
+                "date": "2024-02",
+                "source": "MAS_Consultations",
+            }
+        ]
+        mock_reg.return_value = [
+            {
+                "title": "C",
+                "url": "https://mas.gov.sg/c",
+                "date": "2024-03",
+                "source": "MAS_Regulations",
+            }
+        ]
 
         results = scrape_all_mas()
 
@@ -270,7 +291,12 @@ class TestScrapeAllMas:
     @patch("scripts.scrape_mas.scrape_mas_consultations")
     @patch("scripts.scrape_mas.scrape_mas_publications")
     def test_deduplicates_across_sources(self, mock_pub, mock_con, mock_reg):
-        dup = {"title": "Dup", "url": "https://mas.gov.sg/dup", "date": "2024-01", "source": "MAS_Publications"}
+        dup = {
+            "title": "Dup",
+            "url": "https://mas.gov.sg/dup",
+            "date": "2024-01",
+            "source": "MAS_Publications",
+        }
         mock_pub.return_value = [dup]
         mock_con.return_value = [dup]
         mock_reg.return_value = []

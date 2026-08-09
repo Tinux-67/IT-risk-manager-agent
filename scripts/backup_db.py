@@ -10,8 +10,6 @@ Usage:
 """
 
 import argparse
-import os
-import shutil
 import sqlite3
 import tarfile
 from datetime import datetime

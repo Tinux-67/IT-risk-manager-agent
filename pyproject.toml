@@ -52,6 +52,10 @@ dev = [
     "coverage>=7.0.0",
 ]
 
+[tool.setuptools]
+py-modules = ["app", "config"]
+packages = ["scripts"]
+
 [tool.black]
 line-length = 100
 target-version = ["py311", "py312"]

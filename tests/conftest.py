@@ -11,7 +11,6 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from config import Config
 
 
 # ---------------------------------------------------------------------------
@@ -76,7 +75,7 @@ def sample_update_row(in_memory_db):
     cursor = in_memory_db.cursor()
     cursor.execute("SELECT * FROM updates ORDER BY id DESC LIMIT 1")
     cols = [d[0] for d in cursor.description]
-    return dict(zip(cols, cursor.fetchone()))
+    return dict(zip(cols, cursor.fetchone(), strict=False))
 
 
 # ---------------------------------------------------------------------------

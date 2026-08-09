@@ -11,7 +11,6 @@ full mock of the ``streamlit`` package into ``sys.modules`` before importing
 raising ModuleNotFoundError.
 """
 
-import os
 import sqlite3
 import sys
 import types
@@ -86,9 +85,8 @@ if "scripts.logging_config" not in sys.modules:
 # Import app after stubs are in place
 # ---------------------------------------------------------------------------
 
-import importlib
-import app as _app_module  # noqa: E402 -- must come after sys.modules injection
 
+import app as _app_module  # noqa: E402 -- must come after sys.modules injection
 
 # ---------------------------------------------------------------------------
 # run_script

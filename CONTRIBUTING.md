@@ -142,4 +142,4 @@ it-risk-manager-agent/
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+Apache 2.0.

@@ -6,6 +6,7 @@ A **CLI and web-based agent** for tracking and interpreting EBA and MAS regulati
 [![Lint](https://github.com/Tinux-67/IT-risk-manager-agent/actions/workflows/lint.yml/badge.svg)](https://github.com/Tinux-67/IT-risk-manager-agent/actions/workflows/lint.yml)
 [![Docker Build](https://github.com/Tinux-67/IT-risk-manager-agent/actions/workflows/docker-build.yml/badge.svg)](https://github.com/Tinux-67/IT-risk-manager-agent/actions/workflows/docker-build.yml)
 [![codecov](https://codecov.io/github/Tinux-67/IT-risk-manager-agent/graph/badge.svg?token=MIDSV8D4B2)](https://codecov.io/github/Tinux-67/IT-risk-manager-agent)
+[![Pre-commit](https://github.com/Tinux-67/IT-risk-manager-agent/actions/workflows/pre-commit.yml/badge.svg)](https://github.com/Tinux-67/IT-risk-manager-agent/actions/workflows/pre-commit.yml)
 
 ## ✅ Status: All Badges Green
 All CI/CD workflows are currently passing:
@@ -22,8 +23,8 @@ All CI/CD workflows are currently passing:
 - **Web Scraping**: Automatically scrape regulatory updates from EBA and MAS websites with SSRF protection
 - **LLM Processing**: Use Mistral-7B (via Ollama) for intelligent summarization and categorization with 24-hour cached responses
 - **Alert Generation**: Generate audience-specific alerts (workfloor, management, C-level)
-- **Database Storage**: SQLite database for structured storage of regulatory updates with optimized indexing
-- **Streamlit Dashboard**: Web interface for viewing and filtering updates with single-query optimization
+- **Database Storage**: SQLite database for structured storage of regulatory updates with optimized indexing (`@st.cache_resource` for the DB connection)
+- **Streamlit Dashboard**: Web interface for viewing and filtering updates with single-query optimization; `clear_data_caches()` flushes stale data
 - **Excel Support**: Extract and process text from Excel (.xlsx) documents
 - **Thread-Safe Processing**: Parallel document processing with thread-local database connections
 
@@ -42,7 +43,7 @@ All CI/CD workflows are currently passing:
 
 2. Install dependencies:
    ```bash
-   pip install -r requirements.txt
+   pip install -e .
    ```
 
 3. Set up Ollama and Mistral-7B:
@@ -116,6 +117,7 @@ The codebase follows a modular architecture with centralized shared utilities:
 │   ├── scrape_mas.py              # Scrape MAS publications
 │   ├── process_updates.py         # Process raw updates into database
 │   ├── generate_alerts.py         # Generate audience-specific alerts
+│   ├── backup_db.py                # Backup the SQLite database
 │   ├── create_github_issues.py    # Create GitHub issues from templates
 │   ├── llm_utils.py               # Shared Ollama interface with caching
 │   ├── logging_config.py          # Centralized logging setup
@@ -139,15 +141,24 @@ The codebase includes Server-Side Request Forgery (SSRF) protection through URL 
 
 ### Running Tests Locally
 ```bash
-# Install dev dependencies
-pip install -e ".[dev]"
-
-# Run tests with coverage
+# Run all tests with coverage
 pytest tests/ --cov=scripts -v
 
-# Run specific test file
+# Run specific test files
 pytest tests/test_scrape_eba.py -v
+pytest tests/test_scrape_mas.py -v
+pytest tests/test_app.py -v
+pytest tests/test_integration.py -v
 ```
+
+**Test suite:** 136 tests total, all passing.
+
+### Test Structure
+- **`tests/conftest.py`** — Shared fixtures, in-memory SQLite database, Ollama error mocking
+- **`tests/test_scrape_eba.py`** — EBA scraper coverage (publications, consultations, individual documents)
+- **`tests/test_scrape_mas.py`** — MAS scraper coverage (publications, consultations, regulations, scrape_all_mas)
+- **`tests/test_app.py`** — `app.py` helper functions (`run_script`, `get_updates`, `get_risk_areas`, `get_urgency_levels`)
+- **`tests/test_integration.py`** — Integration tests covering end-to-end workflows
 
 ### Linting and Formatting
 ```bash
@@ -227,5 +238,5 @@ Apache 2.0
 
 ---
 
-**Last Updated**: 2026-08-01
+**Last Updated**: 2026-08-09
 **Status**: All CI/CD workflows passing ✅

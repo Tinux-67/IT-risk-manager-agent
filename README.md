@@ -223,7 +223,7 @@ The following risk areas are tracked:
 5. Open a Pull Request
 
 ## License
-MIT
+Apache 2.0
 
 ---
 

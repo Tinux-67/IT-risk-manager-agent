@@ -195,36 +195,36 @@ def display_update_card(update: dict) -> None:
         "Low": "low",
     }.get(update["urgency_level"], "medium")
 
-    with st.expander(f"\ud83d\udcc4 {update['title']}", expanded=False):
+    with st.expander(f"📄 {update['title']}", expanded=False):
         col1, col2 = st.columns([3, 1])
 
         with col1:
-            st.markdown(f"**\ud83d\udcc5 Date:** {update['publication_date']}")
+            st.markdown(f"**📅 Date:** {update['publication_date']}")
             st.markdown(
-                f"**\ud83c\udff7\ufe0f Risk Area:** <span class='risk-area-tag'>{update['risk_area']}</span>",
+                f"**🏷️ Risk Area:** <span class='risk-area-tag'>{update['risk_area']}</span>",
                 unsafe_allow_html=True,
             )
             st.markdown(
-                f"**\u26a0\ufe0f Urgency:** <span class='urgency-badge {urgency_class}'>{update['urgency_level']}</span>",
+                f"**⚠️ Urgency:** <span class='urgency-badge {urgency_class}'>{update['urgency_level']}</span>",
                 unsafe_allow_html=True,
             )
-            st.markdown(f"**\ud83d\udcc1 File:** `{update['file_path']}`")
+            st.markdown(f"**📁 File:** `{update['file_path']}`")
 
         with col2:
-            if st.button("\ud83d\udd0d View Details", key=f"view_{update['id']}"):
+            if st.button("🔍 View Details", key=f"view_{update['id']}"):
                 st.session_state["selected_update"] = update
                 st.session_state["page"] = "Detail View"
                 st.rerun()
 
         if update.get("summary"):
-            st.markdown("**\ud83d\udcdd Summary:**")
+            st.markdown("**📝 Summary:**")
             st.markdown(update["summary"])
 
 
 def display_update_detail(update: dict) -> None:
     """Display detailed view of a single update."""
     logger.debug(f"Displaying details for update: {update['title']}")
-    st.markdown("## \ud83d\udcc4 Update Details")
+    st.markdown("## 📄 Update Details")
 
     col1, col2 = st.columns([2, 1])
 
@@ -236,7 +236,7 @@ def display_update_detail(update: dict) -> None:
         st.markdown(f"**File Path:** `{update['file_path']}`")
 
     with col2:
-        if st.button("\u2b05 Back to Overview"):
+        if st.button("⬅️ Back to Overview"):
             st.session_state.pop("selected_update", None)
             st.session_state["page"] = "Overview"
             st.rerun()
@@ -244,7 +244,7 @@ def display_update_detail(update: dict) -> None:
     st.markdown("---")
 
     # Display raw text
-    st.markdown("### \ud83d\udcdd Full Text")
+    st.markdown("### 📝 Full Text")
     if update.get("raw_text"):
         st.text_area("", update["raw_text"], height=300, key=f"text_{update['id']}")
     else:
@@ -252,14 +252,14 @@ def display_update_detail(update: dict) -> None:
 
     # Display summary
     if update.get("summary"):
-        st.markdown("### \ud83d\udccc Summary")
+        st.markdown("### 📋 Summary")
         st.markdown(update["summary"])
 
 
 def display_alert_generator() -> None:
     """Display the alert generator interface."""
     logger.debug("Displaying alert generator interface")
-    st.markdown("## \ud83d\udea8 Alert Generator")
+    st.markdown("## 🚨 Alert Generator")
 
     conn = get_db_connection()
 
@@ -271,7 +271,7 @@ def display_alert_generator() -> None:
     with col3:
         use_llm = st.checkbox("Use LLM (Ollama)", value=True)
 
-    if st.button("\ud83d\udd04 Generate Alerts"):
+    if st.button("🔄 Generate Alerts"):
         with st.spinner("Generating alerts..."):
             # Get updates
             updates = get_updates(conn, days=days)
@@ -311,12 +311,12 @@ def display_alert_generator() -> None:
 def display_scrape_and_process() -> None:
     """Display the scrape and process interface."""
     logger.debug("Displaying scrape and process interface")
-    st.markdown("## \ud83d\udd04 Scrape & Process")
+    st.markdown("## 🔄 Scrape & Process")
 
     col1, col2 = st.columns(2)
 
     with col1:
-        st.markdown("### \ud83c\udf10 Scrape EBA Updates")
+        st.markdown("### 🌐 Scrape EBA Updates")
         limit = st.number_input("Number of updates to scrape", min_value=1, max_value=50, value=5)
         delay = st.slider("Delay between requests (seconds)", 0.0, 5.0, 1.0, 0.1)
         document_type = st.text_input("Document type filter", value="248")
@@ -325,7 +325,7 @@ def display_scrape_and_process() -> None:
         if "scraping_running" not in st.session_state:
             st.session_state["scraping_running"] = False
 
-        if st.button("\ud83d\ude80 Start Scraping", disabled=st.session_state["scraping_running"]):
+        if st.button("🚀 Start Scraping", disabled=st.session_state["scraping_running"]):
             st.session_state["scraping_running"] = True
             with st.spinner("Scraping EBA website..."):
                 # Input validation: document_type must be numeric
@@ -355,9 +355,9 @@ def display_scrape_and_process() -> None:
             st.session_state["scraping_running"] = False
 
     with col2:
-        st.markdown("### \ud83d\udcc1 Process Updates")
+        st.markdown("### 📁 Process Updates")
 
-        if st.button("\ud83d\udd04 Process All Files"):
+        if st.button("🔄 Process All Files"):
             with st.spinner("Processing files..."):
                 success, output = run_script("process_updates.py", ["--all"])
                 if success:
@@ -374,7 +374,7 @@ def display_dashboard() -> None:
     """Display the main dashboard with metrics."""
     logger.debug("Displaying dashboard")
     st.markdown(
-        '<p class="main-header">\ud83d\udee1\ufe0f IT Risk Manager Agent</p>',
+        '<p class="main-header">🛡️ IT Risk Manager Agent</p>',
         unsafe_allow_html=True,
     )
 
@@ -421,15 +421,15 @@ def main() -> None:
         st.session_state["selected_update"] = None
 
     # Sidebar navigation
-    st.sidebar.title("\ud83d\udccc Navigation")
+    st.sidebar.title("📋 Navigation")
 
     # Define pages without emojis for session state
     pages = ["Overview", "Detail View", "Alert Generator", "Scrape & Process"]
     page_labels = [
-        "\ud83c\udfe0 Overview",
-        "\ud83d\udd0d Detail View",
-        "\ud83d\udea8 Alert Generator",
-        "\ud83d\udd04 Scrape & Process",
+        "🏠 Overview",
+        "🔍 Detail View",
+        "🚨 Alert Generator",
+        "🔄 Scrape & Process",
     ]
 
     # Find the current page index
@@ -454,7 +454,7 @@ def main() -> None:
         display_dashboard()
 
         st.markdown("---")
-        st.markdown("## \ud83d\udccb Recent Updates")
+        st.markdown("## 📋 Recent Updates")
 
         conn = get_db_connection()
 

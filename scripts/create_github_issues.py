@@ -95,17 +95,17 @@ class GitHubIssuesCreator:
                 return response.json()
             elif response.status_code == 403:
                 print(
-                    f"\u274c Rate limit exceeded or permission denied: {response.text}"
+                    f"❌ Rate limit exceeded or permission denied: {response.text}"
                 )  # noqa: T201
                 return None
             elif response.status_code == 404:
-                print(f"\u274c Not found: {url}")  # noqa: T201
+                print(f"❌ Not found: {url}")  # noqa: T201
                 return None
             else:
-                print(f"\u274c API Error {response.status_code}: {response.text}")  # noqa: T201
+                print(f"❌ API Error {response.status_code}: {response.text}")  # noqa: T201
                 return None
         except requests.exceptions.RequestException as e:
-            print(f"\u274c Request failed: {e}")  # noqa: T201
+            print(f"❌ Request failed: {e}")  # noqa: T201
             return None
 
     def get_repo_info(self) -> dict | None:
@@ -133,13 +133,13 @@ class GitHubIssuesCreator:
             return None
         if isinstance(response, str):
             print(
-                f"\u26a0\ufe0f Unexpected response type for labels: {type(response)}"
+                f"⚠️ Unexpected response type for labels: {type(response)}"
             )  # noqa: T201
             return None
 
         # Ensure response is a list
         if not isinstance(response, list):
-            print("\u26a0\ufe0f Unexpected response format for labels")  # noqa: T201
+            print("⚠️ Unexpected response format for labels")  # noqa: T201
             return None
 
         # Check if label exists
@@ -175,11 +175,11 @@ class GitHubIssuesCreator:
             return None
         if isinstance(response, str):
             print(
-                f"\u26a0\ufe0f Unexpected response type for milestones: {type(response)}"
+                f"⚠️ Unexpected response type for milestones: {type(response)}"
             )  # noqa: T201
             return None
         if not isinstance(response, list):
-            print("\u26a0\ufe0f Unexpected response format for milestones")  # noqa: T201
+            print("⚠️ Unexpected response format for milestones")  # noqa: T201
             return None
 
         # Check if milestone exists
@@ -244,10 +244,10 @@ class GitHubIssuesCreator:
         issue = self._api_request("POST", endpoint, data=issue_data)
 
         if issue and isinstance(issue, dict):
-            print(f"\u2705 Created issue: #{issue.get('number')} - {title}")  # noqa: T201
+            print(f"✅ Created issue: #{issue.get('number')} - {title}")  # noqa: T201
             self.created_issues.append(issue)
         else:
-            print(f"\u274c Failed to create issue: {title}")  # noqa: T201
+            print(f"❌ Failed to create issue: {title}")  # noqa: T201
             self.skipped_issues.append({"title": title, "error": "API failed"})
 
         return issue
@@ -277,7 +277,7 @@ class GitHubIssuesCreator:
         if columns is None:
             return False
         if not isinstance(columns, list):
-            print("\u26a0\ufe0f Unexpected response format for project columns")  # noqa: T201
+            print("⚠️ Unexpected response format for project columns")  # noqa: T201
             return False
 
         # Find the column by name
@@ -288,7 +288,7 @@ class GitHubIssuesCreator:
                 break
 
         if not target_column:
-            print(f"\u274c Column '{column_name}' not found in project")  # noqa: T201
+            print(f"❌ Column '{column_name}' not found in project")  # noqa: T201
             return False
 
         # Get the issue node ID
@@ -328,11 +328,11 @@ class GitHubIssuesCreator:
 
         if response and isinstance(response, dict) and "errors" not in response:
             print(
-                f"\u2705 Added issue #{issue_number} to project column '{column_name}'"
+                f"✅ Added issue #{issue_number} to project column '{column_name}'"
             )  # noqa: T201
             return True
         else:
-            print(f"\u274c Failed to add issue to project: {response}")  # noqa: T201
+            print(f"❌ Failed to add issue to project: {response}")  # noqa: T201
             return False
 
     def get_project_id(self, project_name: str) -> int | None:
@@ -353,7 +353,7 @@ class GitHubIssuesCreator:
         if response is None:
             return None
         if not isinstance(response, list):
-            print("\u26a0\ufe0f Unexpected response format for projects")  # noqa: T201
+            print("⚠️ Unexpected response format for projects")  # noqa: T201
             return None
 
         for project in response:
@@ -373,7 +373,7 @@ class GitHubIssuesCreator:
         with open(template_path, encoding="utf-8") as f:
             issues_template = json.load(f)
 
-        print(f"\ud83d\udcc4 Loaded {len(issues_template)} issues from template")  # noqa: T201
+        print(f"📄 Loaded {len(issues_template)} issues from template")  # noqa: T201
 
         # Create issues
         for issue_data in issues_template:
@@ -384,9 +384,9 @@ class GitHubIssuesCreator:
                 milestone_title=issue_data.get("milestone"),
             )
 
-        print("\n\ud83d\udcca Summary:")  # noqa: T201
-        print(f"   \u2705 Created: {len(self.created_issues)} issues")  # noqa: T201
-        print(f"   \u274c Skipped: {len(self.skipped_issues)} issues")  # noqa: T201
+        print("\n📊 Summary:")  # noqa: T201
+        print(f"   ✅ Created: {len(self.created_issues)} issues")  # noqa: T201
+        print(f"   ❌ Skipped: {len(self.skipped_issues)} issues")  # noqa: T201
 
     def create_issues_and_add_to_project(
         self,
@@ -405,19 +405,19 @@ class GitHubIssuesCreator:
         # Get project ID
         project_id = self.get_project_id(project_name)
         if project_id is None:
-            print(f"\u274c Project '{project_name}' not found")  # noqa: T201
+            print(f"❌ Project '{project_name}' not found")  # noqa: T201
             print("   Creating issues without project board...")  # noqa: T201
             self.create_issues_from_template(template_path)
             return
 
-        print(f"\ud83c\udfaf Found project: {project_name} (ID: {project_id})")  # noqa: T201
+        print(f"🎯 Found project: {project_name} (ID: {project_id})")  # noqa: T201
 
         # Create issues
         self.create_issues_from_template(template_path)
 
         # Add issues to project
         if self.created_issues:
-            print("\n\ud83d\udccb Adding issues to project board...")  # noqa: T201
+            print("\n📋 Adding issues to project board...")  # noqa: T201
             for issue in self.created_issues:
                 if isinstance(issue, dict):
                     self.add_issue_to_project(
@@ -470,7 +470,7 @@ def main() -> None:
     # Check if template file exists
     template_path = Path(args.template)
     if not template_path.exists():
-        print(f"\u274c Template file not found: {template_path}")  # noqa: T201
+        print(f"❌ Template file not found: {template_path}")  # noqa: T201
         sys.exit(1)
 
     # Initialize creator
@@ -480,7 +480,7 @@ def main() -> None:
         dry_run=args.dry_run,
     )
 
-    print("\ud83d\ude80 Starting GitHub Issues Creator")  # noqa: T201
+    print("🚀 Starting GitHub Issues Creator")  # noqa: T201
     print(f"   Repository: {args.repo}")  # noqa: T201
     print(f"   Template: {template_path}")  # noqa: T201
     print(f"   Dry run: {args.dry_run}")  # noqa: T201
@@ -499,7 +499,7 @@ def main() -> None:
     else:
         creator.create_issues_from_template(str(template_path))
 
-    print("\n\u2728 Done!")  # noqa: T201
+    print("\n✨ Done!")  # noqa: T201
 
 
 if __name__ == "__main__":

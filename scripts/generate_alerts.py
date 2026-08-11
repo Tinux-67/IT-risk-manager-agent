@@ -22,65 +22,65 @@ setup_logging()
 # Audience-specific templates
 AUDIENCE_TEMPLATES = {
     "workfloor": {
-        "header": "\ud83d\udd27 WORKFLOOR ALERT: Technical Action Required",
+        "header": "🔧 WORKFLOOR ALERT: Technical Action Required",
         "format": """
-\ud83d\udccc **Title**: {title}
-\ud83d\udcc5 **Date**: {date}
-\ud83c\udff7\ufe0f **Risk Area**: {risk_area}
-\u26a0\ufe0f **Urgency**: {urgency}
+📌 **Title**: {title}
+📅 **Date**: {date}
+🏷️ **Risk Area**: {risk_area}
+⚠️ **Urgency**: {urgency}
 
-\ud83d\udcdd **Summary**:
+📝 **Summary**:
 {summary}
 
-\ud83d\udd17 **Action Items**:
+🔗 **Action Items**:
 - Review the full update: {file_path}
 - Implement technical controls as described.
 - Document compliance measures.
 
-\ud83d\udca1 **Key Takeaways**:
+💡 **Key Takeaways**:
 {key_takeaways}
         """,
     },
     "management": {
-        "header": "\ud83d\udcca MANAGEMENT ALERT: Compliance Update",
+        "header": "📊 MANAGEMENT ALERT: Compliance Update",
         "format": """
-\ud83d\udccc **Title**: {title}
-\ud83d\udcc5 **Date**: {date}
-\ud83c\udff7\ufe0f **Risk Area**: {risk_area}
-\u26a0\ufe0f **Urgency**: {urgency}
+📌 **Title**: {title}
+📅 **Date**: {date}
+🏷️ **Risk Area**: {risk_area}
+⚠️ **Urgency**: {urgency}
 
-\ud83d\udcc8 **Business Impact**:
+📈 **Business Impact**:
 {business_impact}
 
-\ud83c\udfaf **Strategic Actions**:
+🎯 **Strategic Actions**:
 - Assign ownership for compliance.
 - Allocate resources for implementation.
 - Monitor deadlines and milestones.
 
-\ud83d\udcc9 **Risk Assessment**:
+📉 **Risk Assessment**:
 {risk_assessment}
         """,
     },
     "c-level": {
-        "header": "\ud83d\udea8 C-LEVEL ALERT: Regulatory Risk",
+        "header": "🚨 C-LEVEL ALERT: Regulatory Risk",
         "format": """
-\ud83d\udccc **Title**: {title}
-\ud83d\udcc5 **Date**: {date}
-\ud83c\udff7\ufe0f **Risk Area**: {risk_area}
-\u26a0\ufe0f **Urgency**: {urgency}
+📌 **Title**: {title}
+📅 **Date**: {date}
+🏷️ **Risk Area**: {risk_area}
+⚠️ **Urgency**: {urgency}
 
-\ud83d\udcbc **Executive Summary**:
+💼 **Executive Summary**:
 {executive_summary}
 
-\ud83c\udf0d **Strategic Implications**:
+🌍 **Strategic Implications**:
 {strategic_implications}
 
-\ud83d\udccb **Board-Level Actions**:
+📋 **Board-Level Actions**:
 - Approve budget for compliance initiatives.
 - Ensure alignment with corporate strategy.
 - Communicate with regulators if needed.
 
-\ud83d\udd2e **Long-Term Outlook**:
+🔮 **Long-Term Outlook**:
 {long_term_outlook}
         """,
     },
@@ -388,12 +388,12 @@ def main() -> None:
 
     if not updates:
         logger.warning(f"No updates found in the last {args.days} days.")
-        print(f"\u274c No updates found in the last {args.days} days.")  # noqa: T201
+        print(f"❌ No updates found in the last {args.days} days.")  # noqa: T201
         return
 
     logger.info(f"Generating {len(updates)} alert(s) for {args.audience} audience")
     print(
-        f"\ud83d\udce2 Generating {len(updates)} alert(s) for {args.audience} audience..."
+        f"📢 Generating {len(updates)} alert(s) for {args.audience} audience..."
     )  # noqa: T201
 
     # Check if Ollama is available
@@ -403,12 +403,12 @@ def main() -> None:
             import ollama  # noqa: F401
 
             logger.success("Using Ollama (Mistral-7B) for LLM-powered summaries.")
-            print("\u2705 Using Ollama (Mistral-7B) for LLM-powered summaries.")  # noqa: T201
+            print("✅ Using Ollama (Mistral-7B) for LLM-powered summaries.")  # noqa: T201
         except ImportError:
             use_llm = False
             logger.warning("Ollama not installed. Using fallback summaries.")
             print(
-                "\u26a0\ufe0f Ollama not installed. Using fallback summaries. Install with: pip install ollama"
+                "⚠️ Ollama not installed. Using fallback summaries. Install with: pip install ollama"
             )  # noqa: T201
 
     print("=" * 80)

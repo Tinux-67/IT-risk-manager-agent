@@ -94,9 +94,7 @@ class GitHubIssuesCreator:
             if response.status_code == 200 or response.status_code == 201:
                 return response.json()
             elif response.status_code == 403:
-                print(
-                    f"❌ Rate limit exceeded or permission denied: {response.text}"
-                )  # noqa: T201
+                print(f"❌ Rate limit exceeded or permission denied: {response.text}")  # noqa: T201
                 return None
             elif response.status_code == 404:
                 print(f"❌ Not found: {url}")  # noqa: T201
@@ -132,9 +130,7 @@ class GitHubIssuesCreator:
         if response is None:
             return None
         if isinstance(response, str):
-            print(
-                f"⚠️ Unexpected response type for labels: {type(response)}"
-            )  # noqa: T201
+            print(f"⚠️ Unexpected response type for labels: {type(response)}")  # noqa: T201
             return None
 
         # Ensure response is a list
@@ -174,9 +170,7 @@ class GitHubIssuesCreator:
         if response is None:
             return None
         if isinstance(response, str):
-            print(
-                f"⚠️ Unexpected response type for milestones: {type(response)}"
-            )  # noqa: T201
+            print(f"⚠️ Unexpected response type for milestones: {type(response)}")  # noqa: T201
             return None
         if not isinstance(response, list):
             print("⚠️ Unexpected response format for milestones")  # noqa: T201
@@ -327,9 +321,7 @@ class GitHubIssuesCreator:
         )
 
         if response and isinstance(response, dict) and "errors" not in response:
-            print(
-                f"✅ Added issue #{issue_number} to project column '{column_name}'"
-            )  # noqa: T201
+            print(f"✅ Added issue #{issue_number} to project column '{column_name}'")  # noqa: T201
             return True
         else:
             print(f"❌ Failed to add issue to project: {response}")  # noqa: T201

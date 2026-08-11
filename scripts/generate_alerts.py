@@ -392,9 +392,7 @@ def main() -> None:
         return
 
     logger.info(f"Generating {len(updates)} alert(s) for {args.audience} audience")
-    print(
-        f"📢 Generating {len(updates)} alert(s) for {args.audience} audience..."
-    )  # noqa: T201
+    print(f"📢 Generating {len(updates)} alert(s) for {args.audience} audience...")  # noqa: T201
 
     # Check if Ollama is available
     use_llm = not args.no_llm

@@ -52,42 +52,42 @@ Dit project board volgt de **aanbevolen implementatie volgorde** uit de code rev
 ### **🔵 Milestone 3: Testing & Kwaliteitscontrole** *(Week 3)*
 **Doel:** Betere testdekking en codekwaliteit.
 **Prioriteit:** ⭐⭐⭐
-**Status:** ⬜ **Not Started**
+**Status:** ✅ **Complete** (4/4 taken voltooid)
 
 | **Taak** | **Beschrijving** | **Status** | **Labels** | **Assignee** | **PR** |
 |---------|------------------|------------|-----------|--------------|---------|
-| ⬜ **Integratietests** | Voeg `test_integration.py` toe voor E2E workflow | ⬜ **Todo** | `testing`, `integration` | - | - |
-| ⬜ **Ollama Mocking** | Verbeter mocking in tests voor Ollama foutscenario's | ⬜ **Todo** | `testing`, `llm` | - | - |
-| ⬜ **Test Coverage** | Voeg tests toe voor `scrape_mas.py` (ontbrekende functies) | ⬜ **Todo** | `testing`, `scraping` | - | - |
-| ⬜ **Streamlit Tests** | Voeg tests toe voor `app.py` (gebruik `pytest-streamlit`) | ⬜ **Todo** | `testing`, `streamlit` | - | - |
+| ✅ **Integratietests** | `test_integration.py` toegevoegd voor E2E workflow | ✅ **Done** | `testing`, `integration` | - | - |
+| ✅ **Ollama Mocking** | Verbeterde mocking in `conftest.py` voor foutscenario's | ✅ **Done** | `testing`, `llm` | - | - |
+| ✅ **Test Coverage** | Uitgebreide tests voor `scrape_mas.py` en andere modules | ✅ **Done** | `testing`, `scraping` | - | - |
+| ✅ **Streamlit Tests** | `test_app.py` toegevoegd voor dashboard helpers | ✅ **Done** | `testing`, `streamlit` | - | - |
 
 ---
 
 ### **🟣 Milestone 4: Docker & Deployment** *(Week 4)*
 **Doel:** Betere deployment en monitoring.
 **Prioriteit:** ⭐⭐⭐
-**Status:** ⬜ **Not Started**
+**Status:** ✅ **Complete** (4/4 taken voltooid)
 
 | **Taak** | **Beschrijving** | **Status** | **Labels** | **Assignee** | **PR** |
 |---------|------------------|------------|-----------|--------------|---------|
 | ✅ **Dockerfile** | `Dockerfile` aanwezig (multi-stage build) | ✅ **Done** | `docker`, `deployment` | - | - |
-| ⬜ **Health Checks** | Voeg health checks toe aan `docker-compose.yml` | ⬜ **Todo** | `docker`, `monitoring` | - | - |
+| ✅ **Health Checks** | Health checks toegevoegd aan `docker-compose.yml` | ✅ **Done** | `docker`, `monitoring` | - | - |
 | ✅ **Ollama Volume** | `ollama-data` volume aanwezig in `docker-compose.yml` | ✅ **Done** | `docker`, `ollama` | - | - |
-| ⬜ **Backup Script** | Voeg een backup mechanisme toe voor de database | ⬜ **Todo** | `deployment`, `database` | - | - |
+| ✅ **Backup Script** | `scripts/backup_db.py` toegevoegd voor database back-ups | ✅ **Done** | `deployment`, `database` | - | - |
 
 ---
 
 ### **⚫ Milestone 5: Veiligheid & Documentatie** *(Week 4)*
 **Doel:** Veiligheid verbeteren en documentatie bijwerken.
 **Prioriteit:** ⭐⭐⭐
-**Status:** 🟡 **In Progress** (2/4 taken voltooid)
+**Status:** ✅ **Complete** (4/4 taken voltooid)
 
 | **Taak** | **Beschrijving** | **Status** | **Labels** | **Assignee** | **PR** |
 |---------|------------------|------------|-----------|--------------|---------|
 | ✅ **URL Validatie** | `is_allowed_url()` + `_ALLOWED_HOSTNAMES` in `scraping_utils.py` | ✅ **Done** | `security`, `scraping` | - | refactor/optimizations |
 | ✅ **Secrets Management** | `.env.example` aanwezig in repo root | ✅ **Done** | `security`, `config` | - | - |
-| ⬜ **ARCHITECTURE.md** | Voeg architectuur diagram toe | ⬜ **Todo** | `documentation` | - | - |
-| ⬜ **CONTRIBUTING.md** | Voeg bijdrage gids toe | ⬜ **Todo** | `documentation` | - | - |
+| ✅ **ARCHITECTURE.md** | Architectuur diagram en componenten beschreven | ✅ **Done** | `documentation` | - | - |
+| ✅ **CONTRIBUTING.md** | Bijdrage gids toegevoegd | ✅ **Done** | `documentation` | - | - |
 
 ---
 
@@ -97,10 +97,10 @@ Dit project board volgt de **aanbevolen implementatie volgorde** uit de code rev
 |--------------|----------|--------------|---------------|
 | 🟢 Milestone 1 | 4 | 4 | 100% ✅ |
 | 🟡 Milestone 2 | 4 | 4 | 100% ✅ |
-| 🔵 Milestone 3 | 4 | 0 | 0% |
-| 🟣 Milestone 4 | 4 | 2 | 50% |
-| ⚫ Milestone 5 | 4 | 2 | 50% |
-| **Totaal** | **20** | **12** | **60%** |
+| 🔵 Milestone 3 | 4 | 4 | 100% ✅ |
+| 🟣 Milestone 4 | 4 | 4 | 100% ✅ |
+| ⚫ Milestone 5 | 4 | 4 | 100% ✅ |
+| **Totaal** | **20** | **20** | **100%** |
 
 ---
 

@@ -43,4 +43,4 @@ jobs:
       - name: Run codespell
         run: |
           pip install codespell
-          codespell --skip='*.min.js,*.min.css' --ignore-words-list=EBA,MAS,DORA,ba,ca,te,ti
+          codespell --skip='*.min.js,*.min.css,*.html,htmlcov/*,coverage*' --ignore-words-list=EBA,MAS,DORA,ba,ca,te,ti .

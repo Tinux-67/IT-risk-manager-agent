@@ -70,7 +70,7 @@ However, this review was **static only** — the sandbox host has a bare Python 
 **Recommendation:**
 - Add `tenacity` retries with exponential back-off on `requests` calls (or remove `tenacity` from deps).
 - Add a smoke test / integration test that at least parses a saved snapshot of the EBA/MAS page HTML so layout regressions are caught.
-- Validate extracted dates with `datetime.strptime` and log warnings on unparseable values.
+- Validate extracted dates with `datetime.strptime` and log warnings on unparsable values.
 
 ### 5. Parallel Processing Caveat 🟡
 **File:** `scripts/process_updates.py` (`process_files_parallel`)  

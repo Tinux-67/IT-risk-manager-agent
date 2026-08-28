@@ -487,7 +487,7 @@ def process_source_files(
     )
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(
         description="Process raw regulatory updates (EBA and MAS) and store in SQLite."
     )
@@ -518,7 +518,7 @@ def main():
         logger.warning("LLM (Ollama) disabled by user request")
         import scripts.llm_utils as _llm_utils
 
-        _llm_utils.get_ollama_response = lambda *a, **kw: None  # type: ignore[method-assign]
+        _llm_utils.get_ollama_response = lambda *a, **kw: None
 
     conn = init_db()
 

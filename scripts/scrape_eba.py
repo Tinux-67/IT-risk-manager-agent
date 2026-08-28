@@ -13,7 +13,7 @@ import time
 from urllib.parse import urljoin
 
 import requests
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 from loguru import logger
 
 from config import Config
@@ -33,7 +33,7 @@ os.makedirs(Config.EBA_RAW_DATA_DIR, exist_ok=True)
 setup_logging()
 
 
-def build_eba_url(params: dict = None) -> str:
+def build_eba_url(params: dict | None = None) -> str:
     """
     Build the EBA publications URL with query parameters.
 
@@ -48,7 +48,9 @@ def build_eba_url(params: dict = None) -> str:
     return build_url(Config.EBA_PUBLICATIONS_URL, params)
 
 
-def scrape_eba_regulations(session: requests.Session = None, params: dict = None) -> list[dict]:
+def scrape_eba_regulations(
+    session: requests.Session | None = None, params: dict | None = None
+) -> list[dict]:
     """
     Scrape the EBA publications page for regulatory updates.
     Returns a list of dictionaries with title, URL, and date.
@@ -78,7 +80,12 @@ def scrape_eba_regulations(session: requests.Session = None, params: dict = None
         all_links = soup.find_all("a", href=True)
 
         for link in all_links:
-            href = link["href"]
+            if not isinstance(link, Tag):
+                continue
+            href_raw = link.get("href")
+            if not isinstance(href_raw, str) or not href_raw:
+                continue
+            href = href_raw
             full_url = urljoin(Config.EBA_BASE_URL, href)
 
             # Only process direct file links (PDFs, etc.) from /sites/default/files/
@@ -132,7 +139,7 @@ def scrape_eba_regulations(session: requests.Session = None, params: dict = None
         logger.success(f"Found {len(updates)} updates on EBA publications page")
 
     except requests.exceptions.HTTPError as e:
-        if e.response.status_code == 403:
+        if e.response is not None and e.response.status_code == 403:
             logger.error("403 Forbidden: The website may be blocking scrapers.")
             logger.warning("Try adding a delay between requests or using a proxy.")
         else:
@@ -143,7 +150,7 @@ def scrape_eba_regulations(session: requests.Session = None, params: dict = None
     return updates
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description="Scrape EBA regulatory updates.")
     parser.add_argument(
         "--limit", type=int, default=10, help="Limit the number of updates to scrape."

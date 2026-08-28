@@ -92,7 +92,8 @@ class GitHubIssuesCreator:
             )
 
             if response.status_code == 200 or response.status_code == 201:
-                return response.json()
+                result: dict | list[dict] = response.json()
+                return result
             elif response.status_code == 403:
                 print(f"❌ Rate limit exceeded or permission denied: {response.text}")  # noqa: T201
                 return None
@@ -109,7 +110,10 @@ class GitHubIssuesCreator:
     def get_repo_info(self) -> dict | None:
         """Get repository information."""
         endpoint = f"/repos/{self.repo}"
-        return self._api_request("GET", endpoint)
+        result = self._api_request("GET", endpoint)
+        if isinstance(result, dict):
+            return result
+        return None
 
     def get_or_create_label(self, label_name: str, color: str = "0075ca") -> dict | None:
         """
@@ -149,7 +153,10 @@ class GitHubIssuesCreator:
                 "name": label_name,
                 "color": color,
             }
-            return self._api_request("POST", endpoint, data=data)
+            result = self._api_request("POST", endpoint, data=data)
+            if isinstance(result, dict):
+                return result
+            return None
         return {"name": label_name, "color": color}
 
     def get_or_create_milestone(self, title: str, description: str = "") -> dict | None:
@@ -188,7 +195,10 @@ class GitHubIssuesCreator:
                 "description": description,
                 "state": "open",
             }
-            return self._api_request("POST", endpoint, data=data)
+            result = self._api_request("POST", endpoint, data=data)
+            if isinstance(result, dict):
+                return result
+            return None
         return {"title": title, "number": 0}
 
     def create_issue(
@@ -235,9 +245,13 @@ class GitHubIssuesCreator:
 
         # Create the issue
         endpoint = f"/repos/{self.repo}/issues"
-        issue = self._api_request("POST", endpoint, data=issue_data)
+        result = self._api_request("POST", endpoint, data=issue_data)
 
-        if issue and isinstance(issue, dict):
+        issue: dict | None = None
+        if isinstance(result, dict):
+            issue = result
+
+        if issue:
             print(f"✅ Created issue: #{issue.get('number')} - {title}")  # noqa: T201
             self.created_issues.append(issue)
         else:

@@ -10,7 +10,7 @@ from datetime import datetime
 from urllib.parse import unquote, urlencode, urljoin
 
 import requests
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 from loguru import logger
 
 from config import Config
@@ -298,9 +298,12 @@ def find_links(
     for selector in link_selectors:
         all_links = soup.select(selector)
         for link in all_links:
-            href = link.get("href")
-            if not href:
+            if not isinstance(link, Tag):
                 continue
+            href_raw = link.get("href")
+            if not isinstance(href_raw, str) or not href_raw:
+                continue
+            href = href_raw
 
             full_url = urljoin(base_url, href)
 

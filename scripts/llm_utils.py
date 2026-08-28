@@ -101,7 +101,7 @@ def get_ollama_response(
             prompt=prompt,
             options={"temperature": 0.1, "num_predict": max_tokens},
         )
-        text = resp["response"].strip()
+        text = str(resp["response"]).strip()
 
         if conn and text:
             cache_response(conn, prompt, model, text)

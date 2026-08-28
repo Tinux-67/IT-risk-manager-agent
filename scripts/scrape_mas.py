@@ -16,7 +16,7 @@ import time
 from urllib.parse import urljoin
 
 import requests
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 from loguru import logger
 
 from config import Config
@@ -35,7 +35,7 @@ os.makedirs(Config.MAS_RAW_DATA_DIR, exist_ok=True)
 setup_logging()
 
 
-def scrape_mas_publications(session: requests.Session = None) -> list[dict]:
+def scrape_mas_publications(session: requests.Session | None = None) -> list[dict]:
     """
     Scrape the MAS publications page for regulatory updates.
     Returns a list of dictionaries with title, URL, and date.
@@ -65,7 +65,12 @@ def scrape_mas_publications(session: requests.Session = None) -> list[dict]:
         all_links = soup.find_all("a", href=True)
 
         for link in all_links:
-            href = link["href"]
+            if not isinstance(link, Tag):
+                continue
+            href_raw = link.get("href")
+            if not isinstance(href_raw, str) or not href_raw:
+                continue
+            href = href_raw
             full_url = urljoin(Config.MAS_BASE_URL, href)
 
             # Skip if we've already seen this URL
@@ -125,7 +130,7 @@ def scrape_mas_publications(session: requests.Session = None) -> list[dict]:
         logger.success(f"Found {len(updates)} updates on MAS publications page")
 
     except requests.exceptions.HTTPError as e:
-        if e.response.status_code == 403:
+        if e.response is not None and e.response.status_code == 403:
             logger.error("403 Forbidden: The website may be blocking scrapers.")
             logger.warning("Try adding a delay between requests or using a proxy.")
         else:
@@ -136,7 +141,7 @@ def scrape_mas_publications(session: requests.Session = None) -> list[dict]:
     return updates
 
 
-def scrape_mas_consultations(session: requests.Session = None) -> list[dict]:
+def scrape_mas_consultations(session: requests.Session | None = None) -> list[dict]:
     """
     Scrape the MAS public consultations page for regulatory updates.
     Returns a list of dictionaries with title, URL, and date.
@@ -165,7 +170,12 @@ def scrape_mas_consultations(session: requests.Session = None) -> list[dict]:
         all_links = soup.find_all("a", href=True)
 
         for link in all_links:
-            href = link["href"]
+            if not isinstance(link, Tag):
+                continue
+            href_raw = link.get("href")
+            if not isinstance(href_raw, str) or not href_raw:
+                continue
+            href = href_raw
             full_url = urljoin(Config.MAS_BASE_URL, href)
 
             if full_url in seen_urls:
@@ -218,7 +228,7 @@ def scrape_mas_consultations(session: requests.Session = None) -> list[dict]:
     return updates
 
 
-def scrape_mas_regulations(session: requests.Session = None) -> list[dict]:
+def scrape_mas_regulations(session: requests.Session | None = None) -> list[dict]:
     """
     Scrape the MAS regulations and notices page for regulatory updates.
     Returns a list of dictionaries with title, URL, and date.
@@ -247,7 +257,12 @@ def scrape_mas_regulations(session: requests.Session = None) -> list[dict]:
         all_links = soup.find_all("a", href=True)
 
         for link in all_links:
-            href = link["href"]
+            if not isinstance(link, Tag):
+                continue
+            href_raw = link.get("href")
+            if not isinstance(href_raw, str) or not href_raw:
+                continue
+            href = href_raw
             full_url = urljoin(Config.MAS_BASE_URL, href)
 
             if full_url in seen_urls:
@@ -303,7 +318,7 @@ def scrape_mas_regulations(session: requests.Session = None) -> list[dict]:
     return updates
 
 
-def scrape_all_mas(session: requests.Session = None) -> list[dict]:
+def scrape_all_mas(session: requests.Session | None = None) -> list[dict]:
     """
     Scrape all MAS pages (publications, consultations, regulations).
     Returns a combined list of updates.
@@ -336,7 +351,7 @@ def scrape_all_mas(session: requests.Session = None) -> list[dict]:
     return unique_updates
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description="Scrape MAS regulatory updates.")
     parser.add_argument(
         "--limit", type=int, default=10, help="Limit the number of updates to scrape."

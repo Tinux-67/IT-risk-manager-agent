@@ -124,9 +124,18 @@ class TestScrapeEbaRegulations:
 
         # Mock BeautifulSoup
         mock_soup_instance = MagicMock()
-        mock_link = MagicMock()
-        mock_link.__getitem__.return_value = "/sites/default/files/test.pdf"
-        mock_link.get_text.return_value = "Test Document"
+        mock_link = MagicMock(spec=["get", "get_text", "parent"])
+        mock_link.configure_mock(
+            **{
+                "get.return_value": "/sites/default/files/test.pdf",
+                "get_text.return_value": "Test Document",
+                "parent": None,
+            }
+        )
+        # Make isinstance(link, Tag) pass under the production type guard
+        from bs4 import Tag as _Tag
+
+        mock_link.__class__ = _Tag
         mock_soup_instance.find_all.return_value = [mock_link]
         mock_soup.return_value = mock_soup_instance
 

@@ -30,7 +30,7 @@ repos:
     hooks:
       - id: codespell
         name: codespell
-        entry: codespell --skip='*.min.js,*.min.css,*.json,*.md' --ignore-words-list=EBA,MAS,DORA,ba,ca,te,ti,Alle,alle,als,architectuur,Architectuur,Titel,actieve,tabel
+        entry: codespell --skip='*.min.js,*.min.css,*.json,*.md,*.html,htmlcov/*,coverage*,*.css' --ignore-words-list=EBA,MAS,DORA,ba,ca,te,ti,Alle,alle,als,architectuur,Architectuur,Titel,actieve,tabel
         language: system
         types_or: [python]
-        exclude: ^(\.git|\.mypy_cache|\.tox|\.venv|_build|build|dist|\.github)/
+        exclude: ^(\.git|\.mypy_cache|\.tox|\.venv|_build|build|dist|\.github|htmlcov|coverage.*)/

@@ -16,6 +16,9 @@ from loguru import logger
 from config import Config
 from scripts.llm_utils import get_ollama_response, init_ollama_cache
 from scripts.logging_config import setup_logging
+from scripts.retrieval import chunk_text, retrieve_chunks
+from scripts.veracity import score_groundedness
+from scripts.migrations.add_trust_columns import SCHEMA_VERSION as TRUST_SCHEMA_VERSION
 
 setup_logging()
 
@@ -47,6 +50,20 @@ LLM_PROMPTS = {
 
     Urgency:
     """,
+    "retrieve_and_reason": """
+You are a regulatory compliance expert. First, write your reasoning in <think>...</think> tags about which chunks are most relevant to the query and why.
+Then return a JSON object with:
+{
+  "reasoning": "Your chain-of-thought reasoning about which chunks are relevant and why.",
+  "cited_chunks": [
+    {"chunk_text": "...", "char_start": 0, "char_end": 100, "source_file": "eba/foo.pdf"}
+  ]
+}
+
+Context: the following chunks are from a regulatory document.
+Chunks: {chunks}
+Query: {query}
+""",
     "summarize": """
     You are a compliance assistant. Provide a concise summary (2-3 sentences) of the following regulatory text.
     Focus on the key requirements, changes, or obligations.
@@ -79,7 +96,11 @@ def init_db() -> sqlite3.Connection:
             risk_area TEXT,
             urgency_level TEXT,
             source TEXT DEFAULT 'EBA',
-            is_processed BOOLEAN DEFAULT 0
+            is_processed BOOLEAN DEFAULT 0,
+            citation_sources   TEXT,
+            reasoning_chain    TEXT,
+            groundedness_score  REAL,
+            chunk_count        INTEGER DEFAULT 0
         )
     """)
 
@@ -289,6 +310,15 @@ def process_file(file_path: str, conn: sqlite3.Connection) -> tuple[bool, str]:
     Process a single raw file and store it in the database.
     Returns a tuple of (success, filename) for tracking.
     """
+    return _process_file_impl(file_path, conn, run_trust_layer=True)
+
+
+def _process_file_impl(
+    file_path: str,
+    conn: sqlite3.Connection,
+    run_trust_layer: bool = True,
+) -> tuple[bool, str]:
+    """Shared implementation; do not call directly — use process_file()."""
     try:
         cursor = conn.cursor()
         logger.info(f"Processing file: {file_path}")
@@ -331,17 +361,18 @@ def process_file(file_path: str, conn: sqlite3.Connection) -> tuple[bool, str]:
         except ValueError:
             logger.warning(f"Could not parse publication date: {timestamp_str}")
 
-        # Insert into database
+        # ── Step 1: INSERT with NULL placeholders for trust columns ─────────
         cursor.execute(
             """
             INSERT INTO updates (
                 title, source_url, file_path, publication_date,
-                raw_text, summary, risk_area, urgency_level, source, is_processed
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                raw_text, summary, risk_area, urgency_level, source, is_processed,
+                citation_sources, reasoning_chain, groundedness_score, chunk_count
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
             (
                 title,
-                "",  # source_url (can be updated later)
+                "",
                 file_path,
                 publication_date,
                 raw_text,
@@ -350,12 +381,102 @@ def process_file(file_path: str, conn: sqlite3.Connection) -> tuple[bool, str]:
                 urgency,
                 source,
                 True,
+                None,  # citation_sources
+                None,  # reasoning_chain
+                None,  # groundedness_score
+                0,     # chunk_count
             ),
         )
+        update_id = cursor.lastrowid  # now available
+
+        # ── Step 2: Trust layer (chunk → reason → veracity) ────────────────
+        if run_trust_layer:
+            citation_sources_json = "[]"
+            reasoning_chain = ""
+            groundedness_score_val: float | None = None
+            chunk_count_val = 0
+
+            try:
+                chunks = chunk_text(raw_text, file_path, update_id, conn)
+                chunk_count_val = len(chunks)
+
+                if chunks:
+                    chunk_context = "\n\n".join(
+                        f"[Chunk {c['chunk_index']}] {c['chunk_text']}"
+                        for c in chunks
+                    )
+                    reason_prompt = LLM_PROMPTS["retrieve_and_reason"].format(
+                        chunks=chunk_context,
+                        query=f"Risk area: {risk_area}. Urgency: {urgency}.",
+                    )
+                    reason_response = get_ollama_response(reason_prompt, conn=conn)
+
+                    if reason_response:
+                        import json as _json
+
+                        try:
+                            cleaned = reason_response.strip()
+                            if cleaned.startswith("```"):
+                                # Extract JSON from within markdown fence
+                                parts = cleaned.split("```", 2)
+                                if len(parts) >= 3:
+                                    cleaned = parts[2].split("\n", 1)[1]
+                            parsed = _json.loads(cleaned)
+                            reasoning_chain = parsed.get("reasoning", "")
+                            cited = parsed.get("cited_chunks", [])
+                            citation_sources_json = _json.dumps(cited)
+                        except Exception:
+                            logger.warning(
+                                f"Could not parse cited-reasoning JSON for {filename} "
+                                "— storing raw response"
+                            )
+                            reasoning_chain = reason_response
+                            citation_sources_json = "[]"
+
+                    # Veracity scoring
+                    if summary and citation_sources_json not in ("", "[]"):
+                        try:
+                            cited_chunks_list = _json.loads(citation_sources_json)
+                            cited_text = " ".join(c["chunk_text"] for c in cited_chunks_list)
+                            groundedness_score_val = score_groundedness(
+                                cited_text=cited_text,
+                                summary=summary,
+                                conn=conn,
+                            )
+                        except Exception as exc:
+                            logger.warning(f"Veracity scoring failed for {filename}: {exc}")
+
+                logger.debug(
+                    f"Trust layer done for {filename}: chunks={chunk_count_val}, "
+                    f"groundedness={groundedness_score_val}"
+                )
+            except Exception as exc:
+                # Trust layer failures must not halt processing
+                logger.error(f"Trust layer failed for {filename}: {exc}")
+
+            # ── Step 3: UPDATE with trust results ────────────────────────────
+            cursor.execute(
+                """
+                UPDATE updates SET
+                    citation_sources  = ?,
+                    reasoning_chain   = ?,
+                    groundedness_score = ?,
+                    chunk_count       = ?
+                WHERE id = ?
+                """,
+                (
+                    citation_sources_json,
+                    reasoning_chain,
+                    groundedness_score_val,
+                    chunk_count_val,
+                    update_id,
+                ),
+            )
 
         conn.commit()
         logger.success(
-            f"Processed: {filename} (Source: {source}, Risk: {risk_area}, Urgency: {urgency})"
+            f"Processed: {filename} "
+            f"(Source: {source}, Risk: {risk_area}, Urgency: {urgency})"
         )
         return True, filename
 
@@ -372,7 +493,7 @@ def _process_file_worker(file_path: str) -> tuple[bool, str]:
     """
     worker_conn = sqlite3.connect(Config.DB_PATH)
     try:
-        return process_file(file_path, worker_conn)
+        return _process_file_impl(file_path, worker_conn, run_trust_layer=True)
     finally:
         worker_conn.close()
 

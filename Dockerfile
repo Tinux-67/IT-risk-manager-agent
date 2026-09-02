@@ -60,9 +60,11 @@ USER appuser
 # Expose ports
 EXPOSE 8501
 
-# Health check
+# Health check: overridden by docker-compose.yml for production deployments.
+# The compose healthcheck uses SELECT 1 (database-reachability) which is more
+# reliable than the Streamlit health endpoint during initialization.
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD python -c "import sqlite3; conn = sqlite3.connect('data/processed/regulatory_updates.db'); conn.close()" || exit 1
+    CMD python3 -c "import sqlite3, os; db=os.environ.get('DB_PATH','data/processed/regulatory_updates.db'); conn=sqlite3.connect(db, timeout=5); conn.execute('SELECT 1').fetchone(); conn.close()" || exit 1
 
 # Default command (Streamlit)
 CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0"]

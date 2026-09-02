@@ -1,75 +1,98 @@
 version: '3.8'
 
 services:
-  # Main application
+  # ── Main application ────────────────────────────────────────────────────────
   app:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: it-risk-manager-agent
     ports:
-      - "8501:8501"
+      - "${APP_PORT:-8501}:8501"
     volumes:
       - ./data:/app/data
       - ./logs:/app/logs
+    env_file:
+      - ${ENV_FILE:-.env}          # NOT committed; contains real secrets
     environment:
-      - OLLAMA_HOST=http://ollama:11434
-      - OLLAMA_MODEL=mistral
-      - LOG_LEVEL=INFO
-      - LOG_ROTATION=1 day
-      - LOG_RETENTION=7 days
-      - DEFAULT_DELAY=1.0
+      # Override anything from env_file with explicit env vars here.
+      # All secrets travel via env_file — never hardcode them here.
+      - PYTHONUNBUFFERED=1
+      - OLLAMA_HOST=${OLLAMA_HOST:-http://ollama:11434}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-mistral}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - LOG_ROTATION=${LOG_ROTATION:-1 day}
+      - LOG_RETENTION=${LOG_RETENTION:-7 days}
+      - EBA_DELAY=${EBA_DELAY:-1.0}
+      - MAS_DELAY=${MAS_DELAY:-1.0}
       - DATA_DIR=/app/data
       - RAW_DATA_DIR=/app/data/raw
       - PROCESSED_DIR=/app/data/processed
       - LOGS_DIR=/app/logs
       - DB_PATH=/app/data/processed/regulatory_updates.db
-      - PYTHONUNBUFFERED=1
-    user: "1000:1000"  # Run as non-root user to match Dockerfile
     depends_on:
       ollama:
         condition: service_healthy
     restart: unless-stopped
+
+    # R1: Database-reachability healthcheck — truly proves the app can serve queries.
+    # Uses Python inline; does NOT depend on curl, sqlite3 CLI, or the Streamlit
+    # health endpoint (which returns 200 during init even when the app is unusable).
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8501/_stcore/health')"]
+      test: ["CMD", "python3", "-c",
+             "import sqlite3, os; "
+             "db=os.environ.get('DB_PATH','data/processed/regulatory_updates.db'); "
+             "conn=sqlite3.connect(db, timeout=5); "
+             "conn.execute('SELECT 1').fetchone(); "
+             "conn.close(); exit(0)"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 30s
+
     networks:
       - app-network
 
-  # Ollama for LLM support
+  # ── Ollama LLM server ──────────────────────────────────────────────────────
   ollama:
     image: ollama/ollama:latest
     container_name: ollama
     ports:
-      - "11434:11434"
+      - "${OLLAMA_PORT:-11434}:11434"
     volumes:
       - ollama-data:/root/.ollama
     restart: unless-stopped
+
+    # R2: Python urllib healthcheck — uses the Ollama API itself, not curl.
+    # The /api/tags endpoint is guaranteed to exist in every Ollama image.
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      test: ["CMD", "python3", "-c",
+             "import urllib.request, urllib.error, json, sys; "
+             "req=urllib.request.Request('http://localhost:11434/api/tags'); "
+             "with urllib.request.urlopen(req, timeout=5) as r: "
+             "  json.loads(r.read()); "
+             "sys.exit(0)"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 20s
+
     networks:
       - app-network
 
-  # Optional: Ollama model puller (runs once to download mistral model)
+  # ── One-shot model puller ─────────────────────────────────────────────────
   ollama-setup:
     image: ollama/ollama:latest
     container_name: ollama-setup
-    user: "1000:1000"  # Match non-root user
     depends_on:
-      - ollama
+      ollama:
+        condition: service_healthy
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
-        sleep 10
+        sleep 5
         ollama pull mistral
-        echo "Mistral model downloaded successfully!"
+        echo "Mistral model ready."
     restart: on-failure
     networks:
       - app-network

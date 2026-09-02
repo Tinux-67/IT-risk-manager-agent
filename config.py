@@ -40,7 +40,10 @@ class Config:
     MAS_REGULATIONS_URL: str = f"{MAS_BASE_URL}/regulation/regulations-and-notices"
 
     # --- Scraping Settings ---
-    DEFAULT_DELAY: float = float(os.getenv("DEFAULT_DELAY", "1.0"))  # seconds between requests
+    # Per-source delay (seconds between requests); falls back to DEFAULT_DELAY if not set
+    DEFAULT_DELAY: float = float(os.getenv("DEFAULT_DELAY", "1.0"))
+    EBA_DELAY: float = float(os.getenv("EBA_DELAY", str(DEFAULT_DELAY)))
+    MAS_DELAY: float = float(os.getenv("MAS_DELAY", str(DEFAULT_DELAY)))
     USER_AGENT: str = os.getenv(
         "USER_AGENT", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
     )
@@ -83,11 +86,11 @@ class Config:
         Generate a dynamic log filename with current timestamp.
 
         Returns:
-            Path: Full path to the log file (e.g., logs/app_2026-07-26.log)
+            Path: Full path to the log file (e.g., logs/app_2026-09-02.log)
         """
         cls.LOGS_DIR.mkdir(parents=True, exist_ok=True)
-        timestamp = datetime.now().strftime("%Y-%m-%d")
-        return cls.LOGS_DIR / f"app_{timestamp}.log"
+        stamp = datetime.now().strftime("%Y-%m-%d")
+        return cls.LOGS_DIR / f"app_{stamp}.log"
 
     @classmethod
     def init_dirs(cls) -> None:

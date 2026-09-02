@@ -1,0 +1,238 @@
+/* IT Risk Manager Agent — Professional Stylesheet
+   Extracted from app.py and extended with dark mode and new components.
+   Loaded via load_css() in app.py using st.markdown(unsafe_allow_html=False).
+*/
+
+/* ── CSS Custom Properties ─────────────────────────────────────────────────── */
+:root {
+    --bg-primary: #ffffff;
+    --bg-secondary: #f0f2f6;
+    --bg-tertiary: #e8ecf0;
+    --text-primary: #1f1f1f;
+    --text-secondary: #555555;
+    --accent: #1f77b4;
+    --accent-hover: #1565a8;
+    --border-color: #e0e0e0;
+    --success: #28a745;
+    --warning: #ffc107;
+    --danger: #dc3545;
+    --info: #17a2b8;
+
+    /* Urgency colours */
+    --urgent-bg: #ff4444;
+    --urgent-text: #ffffff;
+    --high-bg: #ff8800;
+    --high-text: #ffffff;
+    --medium-bg: #ffcc00;
+    --medium-text: #1f1f1f;
+    --low-bg: #44bb44;
+    --low-text: #1f1f1f;
+
+    /* Groundedness indicator */
+    --grounded-high: #28a745;
+    --grounded-mid:  #f0ad4e;
+    --grounded-low:  #dc3545;
+}
+
+/* ── Dark Mode ──────────────────────────────────────────────────────────────── */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg-primary: #1a1a1a;
+        --bg-secondary: #222222;
+        --bg-tertiary: #2d2d2d;
+        --text-primary: #e0e0e0;
+        --text-secondary: #aaaaaa;
+        --accent: #4da6d9;
+        --accent-hover: #6bb8e4;
+        --border-color: #404040;
+        --success: #48c774;
+        --warning: #ffc107;
+        --danger: #e55353;
+        --info: #3ab8d4;
+
+        /* Urgency colours — slightly muted in dark mode */
+        --urgent-bg: #c93030;
+        --urgent-text: #ffffff;
+        --high-bg: #cc6600;
+        --high-text: #ffffff;
+        --medium-bg: #d4a800;
+        --medium-text: #1a1a1a;
+        --low-bg: #339933;
+        --low-text: #ffffff;
+    }
+}
+
+/* ── Base ─────────────────────────────────────────────────────────────────── */
+html, body, .stApp {
+    background-color: var(--bg-primary) !important;
+    color: var(--text-primary) !important;
+}
+
+/* ── Header ───────────────────────────────────────────────────────────────── */
+.main-header {
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: var(--accent);
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+/* ── Metrics Row ──────────────────────────────────────────────────────────── */
+.metrics-row {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.metric-card {
+    background-color: var(--bg-secondary);
+    padding: 1rem;
+    border-radius: 0.5rem;
+    border-left: 4px solid var(--accent);
+    flex: 1;
+}
+
+/* ── Filter Panel ────────────────────────────────────────────────────────── */
+.filter-panel {
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.filter-panel summary {
+    font-weight: 600;
+    cursor: pointer;
+    margin-bottom: 0.75rem;
+}
+
+/* ── Urgency Badges ───────────────────────────────────────────────────────── */
+.urgency-badge {
+    padding: 0.2rem 0.5rem;
+    border-radius: 0.25rem;
+    font-weight: bold;
+    display: inline-block;
+    font-size: 0.8rem;
+}
+
+.urgent  { background-color: var(--urgent-bg);  color: var(--urgent-text); }
+.high    { background-color: var(--high-bg);     color: var(--high-text); }
+.medium  { background-color: var(--medium-bg);  color: var(--medium-text); }
+.low     { background-color: var(--low-bg);     color: var(--low-text); }
+
+/* ── Risk Area Tags ──────────────────────────────────────────────────────── */
+.risk-area-tag {
+    background-color: var(--bg-tertiary);
+    padding: 0.2rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.8rem;
+    display: inline-block;
+    margin-right: 0.5rem;
+    color: var(--text-primary);
+}
+
+/* ── Groundedness Indicator ───────────────────────────────────────────────── */
+.groundedness-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 4px;
+    vertical-align: middle;
+}
+
+.groundedness-high { background-color: var(--grounded-high); }
+.groundedness-mid  { background-color: var(--grounded-mid); }
+.groundedness-low  { background-color: var(--grounded-low); }
+
+.groundedness-label {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+/* ── Citation Badge ──────────────────────────────────────────────────────── */
+.citation-badge {
+    background-color: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    color: var(--text-secondary);
+}
+
+/* ── Reasoning Panel ─────────────────────────────────────────────────────── */
+.reasoning-panel {
+    background-color: var(--bg-tertiary);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 0.25rem 0.25rem 0;
+    padding: 0.75rem 1rem;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-top: 0.5rem;
+}
+
+/* ── Update Card ─────────────────────────────────────────────────────────── */
+.update-card {
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+}
+
+/* ── Tables ──────────────────────────────────────────────────────────────── */
+.stDataFrame table, .stTable table {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+.stDataFrame th, .stTable th {
+    background-color: var(--bg-tertiary) !important;
+    color: var(--text-primary) !important;
+}
+
+.stDataFrame td, .stTable td {
+    border-bottom: 1px solid var(--border-color);
+}
+
+/* ── Expander ────────────────────────────────────────────────────────────── */
+.streamlit-expander {
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+}
+
+/* ── Sidebar ─────────────────────────────────────────────────────────────── */
+[data-testid="stSidebar"] {
+    background-color: var(--bg-secondary);
+    border-right: 1px solid var(--border-color);
+}
+
+/* ── Footer ──────────────────────────────────────────────────────────────── */
+.footer {
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    margin-top: 2rem;
+}
+
+.footer a {
+    color: var(--accent);
+}
+
+/* ── Streamlit overrides ─────────────────────────────────────────────────── */
+section[data-testid="stMainBlockContainer"] {
+    background-color: var(--bg-primary);
+}
+
+/* Alert export button area */
+.alert-export-area {
+    margin-top: 1rem;
+    padding: 1rem;
+    background-color: var(--bg-secondary);
+    border-radius: 0.5rem;
+    border: 1px solid var(--border-color);
+}

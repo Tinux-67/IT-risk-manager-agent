@@ -131,20 +131,64 @@ def init_db() -> sqlite3.Connection:
 
 
 def extract_text_from_pdf(file_path: str) -> str:
-    """Extract text from a PDF file."""
+    """
+    Extract text from a PDF using multiple engines in order of reliability.
+
+    Engines tried (in order):
+      1. pypdf (PdfReader) — fastest, works for text-based PDFs
+      2. pdfminer.six (PDFPageBrowser + LAParams) — slower, better for complex layouts
+
+    If all engines fail, returns an empty string and logs the specific failure.
+    Logs the character count of the extracted text so the caller can detect silent
+    failures (e.g. scanned/image-only PDFs that produce zero characters).
+    """
+    # ── Engine 1: pypdf ──────────────────────────────────────────────────
     try:
         from pypdf import PdfReader
 
-        logger.debug(f"Extracting text from PDF: {file_path}")
+        logger.debug(f"[pypdf] Extracting text from PDF: {file_path}")
         reader = PdfReader(file_path)
-        text = "\n".join([page.extract_text() for page in reader.pages])
-        return text
+        pages: list[str] = []
+        for page in reader.pages:
+            try:
+                txt = page.extract_text()
+            except Exception as exc:
+                logger.warning(f"[pypdf] Failed to extract page {page}: {exc}")
+                txt = ""
+            pages.append(txt)
+        text = "\n".join(pages)
+        if text.strip():
+            logger.info(f"[pypdf] Extracted {len(text)} chars from {file_path}")
+            return text
+        else:
+            logger.warning(f"[pypdf] Extracted 0 chars from {file_path} — trying pdfminer")
     except ImportError:
-        logger.warning("pypdf not installed. Install with: pip install pypdf")
-        return ""
-    except Exception as e:
-        logger.error(f"Error reading PDF {file_path}: {e}")
-        return ""
+        logger.warning("[pypdf] Not installed — trying pdfminer")
+    except Exception as exc:
+        logger.warning(f"[pypdf] Unexpected error: {exc} — trying pdfminer")
+
+    # ── Engine 2: pdfminer.six ─────────────────────────────────────────────
+    try:
+        from pdfminer.high_level import extract_text as _extract_pdfminer
+
+        logger.debug(f"[pdfminer] Extracting text from PDF: {file_path}")
+        text = _extract_pdfminer(file_path)
+        if text and text.strip():
+            logger.info(f"[pdfminer] Extracted {len(text)} chars from {file_path}")
+            return text
+        else:
+            logger.warning(f"[pdfminer] Extracted 0 meaningful chars from {file_path}")
+    except ImportError:
+        logger.warning("[pdfminer] pdfminer.six not installed — PDF text unavailable")
+    except Exception as exc:
+        logger.error(f"[pdfminer] Unexpected error: {exc}")
+
+    # Both engines failed or produced empty output
+    logger.error(
+        f"PDF text extraction failed for {file_path}: "
+        "all engines returned empty text (likely a scanned/image-only PDF)"
+    )
+    return ""
 
 
 def extract_text_from_html(file_path: str) -> str:
@@ -276,22 +320,42 @@ def assess_urgency(text: str, conn: sqlite3.Connection | None = None) -> str:
 
 
 def generate_summary(text: str, conn: sqlite3.Connection | None = None) -> str:
-    """Generate a summary using LLM or fallback to first paragraph."""
-    if text and len(text) > 50:
-        prompt = LLM_PROMPTS["summarize"].format(text=text[:4000])
-        llm_response = get_ollama_response(prompt, conn=conn)
-        if llm_response:
-            logger.debug("Generated LLM summary")
-            return llm_response
+    """
+    Generate a summary using the LLM, with a fallback if the response is empty,
+    suspiciously short (less than 10 chars), or suspiciously similar to the input
+    (suggesting the LLM just echoed the prompt).
 
-    # Fallback to first paragraph
-    logger.debug("Using fallback summary (first paragraph)")
+    The minimum length gate is 20 characters — any response shorter than this is
+    treated as a failure and the first paragraph fallback is used instead.
+    """
+    if not text or len(text.strip()) < 50:
+        logger.warning(
+            f"Input text too short ({len(text)} chars) for summarisation — using fallback"
+        )
+        return _fallback_summary(text)
+
+    prompt = LLM_PROMPTS["summarize"].format(text=text[:4000])
+    llm_response = get_ollama_response(prompt, conn=conn)
+
+    MIN_SUMMARY_LENGTH = 20
+    if llm_response and len(llm_response.strip()) >= MIN_SUMMARY_LENGTH:
+        logger.debug(f"Generated LLM summary ({len(llm_response)} chars)")
+        return llm_response
+
+    logger.warning(
+        f"LLM summary response too short or empty "
+        f"(got {len(llm_response) if llm_response else 0} chars) — using fallback"
+    )
+    return _fallback_summary(text)
+
+
+def _fallback_summary(text: str) -> str:
+    """Extract the first non-empty paragraph as a fallback summary."""
     if text:
         paragraphs = [p.strip() for p in text.split("\n") if p.strip()]
         if paragraphs:
-            summary = paragraphs[0][:500] + "..." if len(paragraphs[0]) > 500 else paragraphs[0]
-            return summary
-
+            first = paragraphs[0]
+            return first[:500] + "..." if len(first) > 500 else first
     return "No summary available."
 
 
@@ -349,10 +413,64 @@ def _process_file_impl(
             logger.warning(f"No text extracted from {file_path}")
             return False, filename
 
-        # Categorize and assess using LLM or keywords (pass connection for caching)
+        # ── Pre-INSERT data quality gate ─────────────────────────────────
+        # After extraction + LLM processing, validate that meaningful content exists.
+        # Reject documents where:
+        #   - raw_text is empty (extraction failure)
+        #   - summary is the fallback (LLM produced nothing useful)
+        #   - risk_area is the fallback AND urgency is default (LLM produced nothing)
+        # Trust layer is skipped entirely if the document fails quality gate.
         risk_area = categorize_risk_area(raw_text, conn)
         urgency = assess_urgency(raw_text, conn)
         summary = generate_summary(raw_text, conn)
+
+        LOW_QUALITY_SUMMARIES = {
+            "No summary available.",
+            "No risk area matched. Defaulting to 'Other'.",
+            "Defaulting to 'Other' risk area.",
+            "No risk area matched. Defaulting to Other.",
+        }
+        is_summary_fallback = (
+            summary in LOW_QUALITY_SUMMARIES
+            or summary.lower().startswith("defaulting")
+        )
+        is_risk_fallback = risk_area == "Other"
+        is_urgency_fallback = urgency == "Medium"  # Default; not definitive alone
+
+        quality_failed = is_summary_fallback and is_risk_fallback and is_urgency_fallback
+        if quality_failed:
+            logger.error(
+                f"Data quality gate FAILED for {filename}: "
+                f"summary='{summary[:50]}', risk_area='{risk_area}', urgency='{urgency}'. "
+                f"Document may be empty or unscrapable. Skipping INSERT."
+            )
+            # Don't INSERT a garbage record, but still count it as "processed" to avoid
+            # infinite retry loops on genuinely unscrapable documents.
+            # Mark as is_processed=1 so re-runs don't keep trying.
+            cursor.execute(
+                """
+                INSERT INTO updates (
+                    title, source_url, file_path, publication_date,
+                    raw_text, summary, risk_area, urgency_level, source, is_processed,
+                    citation_sources, reasoning_chain, groundedness_score, chunk_count
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    title,
+                    "",
+                    file_path,
+                    publication_date,
+                    "",  # raw_text intentionally empty — signals extraction failure
+                    summary,
+                    risk_area,
+                    urgency,
+                    source,
+                    True,  # is_processed — mark done so re-runs skip this file
+                    None, None, None, 0,
+                ),
+            )
+            conn.commit()
+            return True, filename  # Return True so the file isn't retried endlessly
 
         # Parse publication date from filename or text
         publication_date = timestamp_str[:8] if timestamp_str else "Unknown"

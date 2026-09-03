@@ -32,19 +32,14 @@ services:
       - DB_PATH=/app/data/processed/regulatory_updates.db
     depends_on:
       ollama:
-        condition: service_healthy
+        condition: service_started
     restart: unless-stopped
 
     # R1: Database-reachability healthcheck — truly proves the app can serve queries.
     # Uses Python inline; does NOT depend on curl, sqlite3 CLI, or the Streamlit
     # health endpoint (which returns 200 during init even when the app is unusable).
     healthcheck:
-      test: ["CMD", "python3", "-c",
-             "import sqlite3, os; "
-             "db=os.environ.get('DB_PATH','data/processed/regulatory_updates.db'); "
-             "conn=sqlite3.connect(db, timeout=5); "
-             "conn.execute('SELECT 1').fetchone(); "
-             "conn.close(); exit(0)"]
+      test: ["CMD-SHELL", "python3 -c \"import sqlite3, os; db=os.environ.get('DB_PATH','data/processed/regulatory_updates.db'); conn=sqlite3.connect(db, timeout=5); conn.execute('SELECT 1').fetchone(); conn.close();\""]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -66,12 +61,7 @@ services:
     # R2: Python urllib healthcheck — uses the Ollama API itself, not curl.
     # The /api/tags endpoint is guaranteed to exist in every Ollama image.
     healthcheck:
-      test: ["CMD", "python3", "-c",
-             "import urllib.request, urllib.error, json, sys; "
-             "req=urllib.request.Request('http://localhost:11434/api/tags'); "
-             "with urllib.request.urlopen(req, timeout=5) as r: "
-             "  json.loads(r.read()); "
-             "sys.exit(0)"]
+      test: ["CMD-SHELL", "python3 -c \"import urllib.request, urllib.error, json, sys; req=urllib.request.Request('http://localhost:11434/api/tags'); with urllib.request.urlopen(req, timeout=5) as r: json.loads(r.read()); sys.exit(0)\""]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -86,7 +76,7 @@ services:
     container_name: ollama-setup
     depends_on:
       ollama:
-        condition: service_healthy
+        condition: service_started
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |

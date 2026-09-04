@@ -113,6 +113,7 @@ def score_groundedness(
     # ── LLM call ─────────────────────────────────────────────────────────────
     prompt = VERACITY_PROMPT.format(cited_text=cited_text, summary=summary)
 
+    raw = ""
     try:
         client = _ollama.Client(host="http://localhost:11434")
         resp = client.generate(
@@ -124,7 +125,8 @@ def score_groundedness(
 
     except Exception as exc:
         logger.error(f"Ollama veracity call failed: {exc}")
-        return 0.5
+        # Continue with empty raw to cache the default score
+        raw = ""
 
     # ── Parse + cache ────────────────────────────────────────────────────────
     score = _parse_score(raw)

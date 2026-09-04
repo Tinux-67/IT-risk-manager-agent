@@ -87,6 +87,18 @@ def get_metrics(conn: sqlite3.Connection) -> dict:
     return dict(zip(names, row)) if row else {}
 
 
+def build_in_clause(values: list) -> tuple[str, list]:
+    """Return placeholders and a flat copy of values for a SQL IN clause.
+
+    For a non-empty list returns e.g. ("?, ?, ?", [v1, v2, v3]).
+    For an empty list returns ("NULL", []), keeping the SQL syntactically
+    valid while matching nothing.
+    """
+    if not values:
+        return "NULL", []
+    return ", ".join("?" for _ in values), list(values)
+
+
 @st.cache_data(ttl=300)
 def get_updates(
     _conn: sqlite3.Connection,
@@ -109,19 +121,19 @@ def get_updates(
         params.append(cutoff)
 
     if risk_areas:
-        placeholders = ",".join("?" * len(risk_areas))
+        placeholders, risk_params = build_in_clause(risk_areas)
         query += f" AND risk_area IN ({placeholders})"
-        params.extend(risk_areas)
+        params.extend(risk_params)
 
     if urgencies:
-        placeholders = ",".join("?" * len(urgencies))
+        placeholders, urgency_params = build_in_clause(urgencies)
         query += f" AND urgency_level IN ({placeholders})"
-        params.extend(urgencies)
+        params.extend(urgency_params)
 
     if sources:
-        placeholders = ",".join("?" * len(sources))
+        placeholders, source_params = build_in_clause(sources)
         query += f" AND source IN ({placeholders})"
-        params.extend(sources)
+        params.extend(source_params)
 
     if search_query:
         query += " AND (title LIKE ? OR summary LIKE ?)"

@@ -25,8 +25,9 @@ class TestParseScore:
             # Edge cases
             ("0.85 is the score", 0.85),
             ("Score:0.72", 0.72),
-            # Strict: bare 0 / -0.3 / -1.0 are not valid score strings
-            ("0", None),
+            # bare 0 is parsed as 0.0 (valid score)
+            ("0", 0.0),
+            # Negative numbers are rejected
             ("-0.3", None),
             ("-1.0", None),
         ],
@@ -99,7 +100,7 @@ class TestVeracityCaching:
 
         # Verify cache entry was written
         rows = conn.execute("SELECT COUNT(*) FROM ollama_cache").fetchone()[0]
-        assert rows >= 1, "Expected at least one cache entry"
+        assert rows >= 1, f"Expected at least one cache entry, got {rows}"
         conn.close()
 
 

@@ -73,13 +73,13 @@ class TestChunkText:
         assert self._do_chunk("   \n\n  ") == []
 
     def test_chunk_word_size(self):
-        words = " ".join([f"word{i}"] for i in range(600))
+        words = " ".join(f"word{i}" for i in range(600))
         chunks = self._do_chunk(words)
         for ch in chunks:
             assert len(ch["chunk_text"].split()) <= CHUNK_WORD_SIZE
 
     def test_overlap_between_chunks(self):
-        long_text = " ".join([f"word{i}"] for i in range(CHUNK_WORD_SIZE + CHUNK_WORD_OVERLAP + 10))
+        long_text = " ".join(f"word{i}" for i in range(CHUNK_WORD_SIZE + CHUNK_WORD_OVERLAP + 10))
         chunks = self._do_chunk(long_text)
         assert len(chunks) >= 2
         # Second chunk should contain the last N words of the first chunk (overlap)
@@ -146,8 +146,10 @@ class TestReasoningChainParsing:
         cleaned = raw_response.strip()
         if cleaned.startswith("```"):
             parts = cleaned.split("```", 2)
-            if len(parts) >= 3:
-                cleaned = parts[2].split("\n", 1)[1]
+            if len(parts) >= 2:
+                content_part = parts[1]
+                if "\n" in content_part:
+                    cleaned = content_part.split("\n", 1)[1]
         parsed = json.loads(cleaned)
         reasoning = parsed.get("reasoning", "")
         cited = parsed.get("cited_chunks", [])

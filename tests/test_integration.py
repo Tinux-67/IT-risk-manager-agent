@@ -68,7 +68,11 @@ def _bootstrap_schema(conn: sqlite3.Connection) -> None:
             risk_area TEXT,
             urgency_level TEXT,
             source TEXT DEFAULT 'EBA',
-            is_processed BOOLEAN DEFAULT 0
+            is_processed BOOLEAN DEFAULT 0,
+            citation_sources TEXT,
+            reasoning_chain TEXT,
+            groundedness_score REAL,
+            chunk_count INTEGER DEFAULT 0
         );
         CREATE TABLE IF NOT EXISTS metadata (key TEXT PRIMARY KEY, value TEXT);
         CREATE TABLE IF NOT EXISTS ollama_cache (

@@ -254,8 +254,12 @@ class TestProcessFile:
                     summary TEXT,
                     risk_area TEXT,
                     urgency_level TEXT,
+                    source TEXT DEFAULT "EBA",
                     is_processed BOOLEAN DEFAULT 0,
-                    source TEXT DEFAULT "EBA"
+                    citation_sources TEXT,
+                    reasoning_chain TEXT,
+                    groundedness_score REAL,
+                    chunk_count INTEGER DEFAULT 0
                 )
             """)
             conn.commit()

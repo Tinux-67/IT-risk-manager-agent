@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import re
 import sqlite3
-from pathlib import Path
 from typing import Any
 
 from loguru import logger
@@ -128,7 +127,7 @@ def _tokenise(text: str) -> list[str]:
     return re.findall(r"\b\w+\b", text.lower())
 
 
-def _build_bm25(chunks: list[dict[str, Any]]) -> "BM25Okapi | None":
+def _build_bm25(chunks: list[dict[str, Any]]) -> BM25Okapi | None:
     """Build a BM25 index from a list of chunk dicts. Returns None if BM25 unavailable."""
     if not _bm25_available:
         return None
@@ -196,7 +195,7 @@ def retrieve_chunks(
             query_tokens = _tokenise(query)
             scores = bm25.get_scores(query_tokens)
             # Pair chunks with scores, sort descending
-            scored = sorted(zip(scores, chunks), reverse=True)
+            scored = sorted(zip(scores, chunks, strict=False), reverse=True)
             return [c for _, c in scored[:top_k]]
 
     # Fallback

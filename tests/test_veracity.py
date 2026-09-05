@@ -2,12 +2,10 @@
 
 import sqlite3
 from pathlib import Path
-from typing import Tuple
 
 import pytest
 
 from scripts.veracity import _parse_score, score_groundedness
-
 
 # ── Score Parsing ─────────────────────────────────────────────────────────────
 
@@ -53,7 +51,7 @@ class TestParseScore:
 
 
 class TestVeracityCaching:
-    def _make_db(self) -> Tuple[Path, sqlite3.Connection]:
+    def _make_db(self) -> tuple[Path, sqlite3.Connection]:
         """Minimal in-memory DB with ollama_cache table."""
         conn = sqlite3.connect(":memory:")
         conn.execute("""

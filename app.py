@@ -9,7 +9,6 @@ from __future__ import annotations
 import json
 import os
 import sqlite3
-import sys
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -57,7 +56,7 @@ def get_db_connection() -> sqlite3.Connection:
     """Cached database connection."""
     if not os.path.exists(DB_PATH):
         logger.error(f"Database not found at {DB_PATH}")
-        st.error(f"Database not found. Run `python scripts/process_updates.py --all` first.")
+        st.error("Database not found. Run `python scripts/process_updates.py --all` first.")
         st.stop()
     conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
     return conn
@@ -84,7 +83,7 @@ def get_metrics(conn: sqlite3.Connection) -> dict:
     """)
     row = c.fetchone()
     names = [d[0] for d in c.description]
-    return dict(zip(names, row)) if row else {}
+    return dict(zip(names, row, strict=False)) if row else {}
 
 
 def build_in_clause(values: list) -> tuple[str, list]:
@@ -143,7 +142,7 @@ def get_updates(
 
     c = _conn.execute(query, params)
     cols = [d[0] for d in c.description]
-    return [dict(zip(cols, row)) for row in c.fetchall()]
+    return [dict(zip(cols, row, strict=False)) for row in c.fetchall()]
 
 
 @st.cache_data(ttl=300)
@@ -213,7 +212,6 @@ def _citation_badge_html(citation_json: str | None) -> str:
 def display_metrics_row(metrics: dict) -> None:
     """Render the top-level KPI metrics row."""
     cols = st.columns(6)
-    delta_inverse = "inverse"
 
     def cell(col, label: str, value, delta: str | None = None, delta_col: str = "off"):
         with col:
@@ -378,6 +376,8 @@ def page_scrape_process() -> None:
     with col_limit:
         limit = st.number_input("Limit", min_value=1, max_value=100, value=10, key="scrape_limit")
     with col_delay:
+        from config import Config
+
         delay = st.slider("Delay (s)", 0.0, 5.0, Config.EBA_DELAY, 0.1, key="scrape_delay")
     with col_doctype:
         doctype = st.text_input("Document type", value="248", key="scrape_doctype")
@@ -403,6 +403,8 @@ def page_scrape_process() -> None:
     with col_limit_m:
         limit_m = st.number_input("Limit", min_value=1, max_value=100, value=10, key="scrape_mas_limit")
     with col_delay_m:
+        from config import Config
+
         delay_m = st.slider("Delay (s)", 0.0, 5.0, Config.MAS_DELAY, 0.1, key="scrape_mas_delay")
 
     if st.button("🚀 Scrape MAS", type="primary"):
@@ -422,8 +424,9 @@ def page_scrape_process() -> None:
     if st.button("🔄 Process Files", type="primary"):
         with st.spinner("Processing…"):
             try:
-                from scripts.process_updates import process_all_files
+
                 from config import Config
+                from scripts.process_updates import process_all_files
 
                 conn = sqlite3.connect(str(Config.DB_PATH))
                 process_all_files(conn, max_workers=4)

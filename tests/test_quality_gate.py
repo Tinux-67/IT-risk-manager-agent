@@ -7,14 +7,11 @@ This test must FAIL if a future change causes the pipeline to INSERT garbage rec
 
 from __future__ import annotations
 
-import json
 import os
 import sqlite3
 import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock, patch
-
-import pytest
+from unittest.mock import patch
 
 REPO_ROOT = Path(__file__).parent.parent
 
@@ -23,7 +20,7 @@ class TestQualityGateSummary:
     """Summary must meet a minimum length before being accepted."""
 
     def test_summary_rejects_empty_response(self):
-        from scripts.process_updates import generate_summary, _fallback_summary
+        from scripts.process_updates import _fallback_summary
 
         # Empty LLM response → fallback
         result = _fallback_summary("")
@@ -98,11 +95,11 @@ class TestQualityGateLogic:
         Simulate the quality gate logic from _process_file_impl.
         Returns True if the document PASSED the gate (normal INSERT path).
         """
-        LOW_QUALITY_SUMMARIES = {
+        low_quality_summaries = {
             "No summary available.",
         }
         is_summary_fallback = (
-            summary in LOW_QUALITY_SUMMARIES
+            summary in low_quality_summaries
             or summary.lower().startswith("defaulting")
         )
         is_risk_fallback = risk_area == "Other"

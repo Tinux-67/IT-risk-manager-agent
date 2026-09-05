@@ -16,9 +16,8 @@ from loguru import logger
 from config import Config
 from scripts.llm_utils import get_ollama_response, init_ollama_cache
 from scripts.logging_config import setup_logging
-from scripts.retrieval import chunk_text, retrieve_chunks
+from scripts.retrieval import chunk_text
 from scripts.veracity import score_groundedness
-from scripts.migrations.add_trust_columns import SCHEMA_VERSION as TRUST_SCHEMA_VERSION
 
 setup_logging()
 
@@ -337,8 +336,8 @@ def generate_summary(text: str, conn: sqlite3.Connection | None = None) -> str:
     prompt = LLM_PROMPTS["summarize"].format(text=text[:4000])
     llm_response = get_ollama_response(prompt, conn=conn)
 
-    MIN_SUMMARY_LENGTH = 20
-    if llm_response and len(llm_response.strip()) >= MIN_SUMMARY_LENGTH:
+    min_summary_length = 20
+    if llm_response and len(llm_response.strip()) >= min_summary_length:
         logger.debug(f"Generated LLM summary ({len(llm_response)} chars)")
         return llm_response
 
@@ -424,14 +423,14 @@ def _process_file_impl(
         urgency = assess_urgency(raw_text, conn)
         summary = generate_summary(raw_text, conn)
 
-        LOW_QUALITY_SUMMARIES = {
+        low_quality_summaries = {
             "No summary available.",
             "No risk area matched. Defaulting to 'Other'.",
             "Defaulting to 'Other' risk area.",
             "No risk area matched. Defaulting to Other.",
         }
         is_summary_fallback = (
-            summary in LOW_QUALITY_SUMMARIES
+            summary in low_quality_summaries
             or summary.lower().startswith("defaulting")
         )
         is_risk_fallback = risk_area == "Other"
@@ -447,6 +446,11 @@ def _process_file_impl(
             # Don't INSERT a garbage record, but still count it as "processed" to avoid
             # infinite retry loops on genuinely unscrapable documents.
             # Mark as is_processed=1 so re-runs don't keep trying.
+            _pub_date = timestamp_str[:8] if timestamp_str else "Unknown"
+            try:
+                _pub_date = datetime.strptime(_pub_date, "%Y%m%d").strftime("%Y-%m-%d")
+            except ValueError:
+                pass
             cursor.execute(
                 """
                 INSERT INTO updates (
@@ -459,7 +463,7 @@ def _process_file_impl(
                     title,
                     "",
                     file_path,
-                    publication_date,
+                    _pub_date,
                     "",  # raw_text intentionally empty — signals extraction failure
                     summary,
                     risk_area,

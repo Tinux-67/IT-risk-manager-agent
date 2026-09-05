@@ -67,8 +67,8 @@ def check_ollama(ollama_host: str, timeout: float = 5.0) -> bool:
     """Verify the Ollama API is reachable via Python urllib."""
     url = f"{ollama_host.rstrip('/')}/api/tags"
     try:
-        req = urllib.request.Request(url)
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
+        req = urllib.request.Request(url)  # noqa: S310
+        with urllib.request.urlopen(req, timeout=timeout) as resp:  # noqa: S310
             import json
             data = json.loads(resp.read())
             models = data.get("models", [])

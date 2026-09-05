@@ -1,9 +1,7 @@
 """Tests for the citation pipeline (chunking + retrieval + JSON parsing)."""
 
 import json
-import re
 import sqlite3
-import tempfile
 from pathlib import Path
 
 import pytest
@@ -15,7 +13,6 @@ from scripts.retrieval import (
     _naive_retrieve,
     _tokenise,
     chunk_text,
-    retrieve_chunks,
 )
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -186,7 +183,7 @@ class TestReasoningChainParsing:
 
     def test_truncated_json_in_fence(self):
         """Handles the case where the LLM returns a truncated markdown fence."""
-        raw = "```json\n{\"reasoning\": \"partial"
+        raw = '```json\n{"reasoning": "partial'
         with pytest.raises(json.JSONDecodeError):
             self._parse_reasoning(raw)
 

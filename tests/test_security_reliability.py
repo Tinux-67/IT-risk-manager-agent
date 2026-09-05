@@ -5,8 +5,6 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-import pytest
-
 REPO_ROOT = Path(__file__).parent.parent
 
 
@@ -38,7 +36,7 @@ class TestSecurityS1:
         secret_vars = ["OLLAMA_HOST", "OLLAMA_MODEL", "LOG_LEVEL"]
         for var in secret_vars:
             # Should appear as ${VAR:-...} not as a bare value
-            pattern = rf'\$\{{{var}:-'
+            pattern = rf"\$\{{{var}:-"
             assert re.search(pattern, content), f"{var} should use ${{var:-default}} form"
 
 
@@ -100,10 +98,9 @@ class TestSecurityGitIgnore:
     """General: .env files are gitignored."""
 
     def test_dotenv_gitignored(self):
-        from subprocess import run, DEVNULL
+        from subprocess import run
         for f in [".env", ".env.production"]:
-            result = run(
-                ["git", "check-ignore", f],
+            result = run(["git", "check-ignore", f],  # noqa: S603, S607
                 cwd=REPO_ROOT,
                 capture_output=True,
                 text=True,
@@ -150,7 +147,7 @@ class TestReliabilityR2:
         assert ollama_match, "Could not find ollama service block"
         ollama_section = ollama_match.group(0)
         # Remove comments to avoid false positives from comment text
-        no_comments = re.sub(r'#.*', '', ollama_section)
+        no_comments = re.sub(r"#.*", "", ollama_section)
         assert "curl" not in no_comments, "Ollama healthcheck should not use curl"
 
 
@@ -168,9 +165,8 @@ class TestReliabilityR3:
 
     def test_startup_checker_exits_zero_on_success(self):
         # Smoke-test: startup_checker --help should not crash
-        from subprocess import run, DEVNULL
-        result = run(
-            ["python3", "scripts/startup_checker.py", "--help"],
+        from subprocess import run
+        result = run(["python3", "scripts/startup_checker.py", "--help"],  # noqa: S607
             cwd=REPO_ROOT,
             capture_output=True,
             text=True,

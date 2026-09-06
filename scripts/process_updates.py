@@ -429,9 +429,8 @@ def _process_file_impl(
             "Defaulting to 'Other' risk area.",
             "No risk area matched. Defaulting to Other.",
         }
-        is_summary_fallback = (
-            summary in low_quality_summaries
-            or summary.lower().startswith("defaulting")
+        is_summary_fallback = summary in low_quality_summaries or summary.lower().startswith(
+            "defaulting"
         )
         is_risk_fallback = risk_area == "Other"
         is_urgency_fallback = urgency == "Medium"  # Default; not definitive alone
@@ -470,7 +469,10 @@ def _process_file_impl(
                     urgency,
                     source,
                     True,  # is_processed — mark done so re-runs skip this file
-                    None, None, None, 0,
+                    None,
+                    None,
+                    None,
+                    0,
                 ),
             )
             conn.commit()
@@ -506,7 +508,7 @@ def _process_file_impl(
                 None,  # citation_sources
                 None,  # reasoning_chain
                 None,  # groundedness_score
-                0,     # chunk_count
+                0,  # chunk_count
             ),
         )
         update_id = cursor.lastrowid  # now available
@@ -524,8 +526,7 @@ def _process_file_impl(
 
                 if chunks:
                     chunk_context = "\n\n".join(
-                        f"[Chunk {c['chunk_index']}] {c['chunk_text']}"
-                        for c in chunks
+                        f"[Chunk {c['chunk_index']}] {c['chunk_text']}" for c in chunks
                     )
                     reason_prompt = LLM_PROMPTS["retrieve_and_reason"].format(
                         chunks=chunk_context,
@@ -597,8 +598,7 @@ def _process_file_impl(
 
         conn.commit()
         logger.success(
-            f"Processed: {filename} "
-            f"(Source: {source}, Risk: {risk_area}, Urgency: {urgency})"
+            f"Processed: {filename} " f"(Source: {source}, Risk: {risk_area}, Urgency: {urgency})"
         )
         return True, filename
 

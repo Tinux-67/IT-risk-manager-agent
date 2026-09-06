@@ -98,9 +98,8 @@ class TestQualityGateLogic:
         low_quality_summaries = {
             "No summary available.",
         }
-        is_summary_fallback = (
-            summary in low_quality_summaries
-            or summary.lower().startswith("defaulting")
+        is_summary_fallback = summary in low_quality_summaries or summary.lower().startswith(
+            "defaulting"
         )
         is_risk_fallback = risk_area == "Other"
         is_urgency_fallback = urgency == "Medium"
@@ -136,7 +135,11 @@ class TestQualityGateLogic:
     def test_quality_gate_passes_with_good_classifications(self):
         _, conn = self._make_db()
         passed = self._process_file_quality_gate(
-            conn, "meaningful text", "This regulation requires immediate compliance.", "IT Risk Management", "Urgent"
+            conn,
+            "meaningful text",
+            "This regulation requires immediate compliance.",
+            "IT Risk Management",
+            "Urgent",
         )
         assert passed is True
         conn.close()
@@ -247,14 +250,15 @@ class TestTrustLayerNonFatal:
         with tempfile.NamedTemporaryFile(
             suffix=".html", delete=False, mode="w", encoding="utf-8"
         ) as tmp:
-            tmp.write("<html><body>Meaningful regulatory text about compliance requirements.</body></html>\n" * 50)
+            tmp.write(
+                "<html><body>Meaningful regulatory text about compliance requirements.</body></html>\n"
+                * 50
+            )
             tmp_path = tmp.name
 
         try:
             # Mock Ollama to fail — trust layer will get None responses
-            with patch(
-                "scripts.process_updates.get_ollama_response", return_value=None
-            ):
+            with patch("scripts.process_updates.get_ollama_response", return_value=None):
                 ok, name = _process_file_impl(tmp_path, conn, run_trust_layer=True)
 
             # Main processing should succeed
@@ -288,9 +292,7 @@ class TestTrustLayerNonFatal:
             tmp_path = tmp.name
 
         try:
-            with patch(
-                "scripts.process_updates.get_ollama_response", return_value=None
-            ):
+            with patch("scripts.process_updates.get_ollama_response", return_value=None):
                 ok, _ = _process_file_impl(tmp_path, conn, run_trust_layer=True)
 
             assert ok is True

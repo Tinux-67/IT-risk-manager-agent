@@ -29,9 +29,9 @@ except ImportError:
 
 # ── Constants ────────────────────────────────────────────────────────────────
 
-CHUNK_WORD_SIZE = 500      # words per chunk
-CHUNK_WORD_OVERLAP = 50    # overlapping words between consecutive chunks
-TOP_K_DEFAULT = 5          # default number of chunks to retrieve
+CHUNK_WORD_SIZE = 500  # words per chunk
+CHUNK_WORD_OVERLAP = 50  # overlapping words between consecutive chunks
+TOP_K_DEFAULT = 5  # default number of chunks to retrieve
 
 # ── Chunking ────────────────────────────────────────────────────────────────
 

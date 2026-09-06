@@ -22,6 +22,7 @@ _configured: bool = False
 
 def _json_log_path() -> str:
     from datetime import datetime
+
     stamp = datetime.now().strftime("%Y-%m-%d")
     return str(Config.LOGS_DIR / f"app_{stamp}.json")
 
@@ -59,7 +60,7 @@ def setup_logging() -> None:
         rotation=Config.LOG_ROTATION,
         retention=Config.LOG_RETENTION,
         level=Config.LOG_LEVEL,
-        serialize=True,       # loguru serialises to JSON automatically
+        serialize=True,  # loguru serialises to JSON automatically
         compression="gz",
     )
 

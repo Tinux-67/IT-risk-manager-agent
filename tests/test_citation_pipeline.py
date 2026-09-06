@@ -97,7 +97,12 @@ class TestChunkText:
         _, conn = make_temp_db()
         chunk_text("first set of words", "eba/test.pdf", update_id=1, conn=conn)
         assert conn.execute("SELECT COUNT(*) FROM raw_chunks WHERE update_id=1").fetchone()[0] == 1
-        chunk_text("second set of words that is longer and different", "eba/test.pdf", update_id=1, conn=conn)
+        chunk_text(
+            "second set of words that is longer and different",
+            "eba/test.pdf",
+            update_id=1,
+            conn=conn,
+        )
         # After re-chunking, only new chunks remain
         assert conn.execute("SELECT COUNT(*) FROM raw_chunks WHERE update_id=1").fetchone()[0] == 1
         conn.close()
@@ -237,6 +242,8 @@ class TestMigrationIdempotent:
         conn.close()
 
         conn = sqlite3.connect(str(db_path))
-        version = conn.execute("SELECT version FROM schema_version ORDER BY version DESC LIMIT 1").fetchone()[0]
+        version = conn.execute(
+            "SELECT version FROM schema_version ORDER BY version DESC LIMIT 1"
+        ).fetchone()[0]
         conn.close()
         assert version == SCHEMA_VERSION

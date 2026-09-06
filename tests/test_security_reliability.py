@@ -24,8 +24,12 @@ class TestSecurityS1:
     def test_no_token_patterns_in_compose(self):
         content = read("docker-compose.yml")
         patterns = [
-            r"ghp_", r"api_key", r"password\s*=", r"secret\s*=",
-            r"APPROTOKEN", r"BASE64",
+            r"ghp_",
+            r"api_key",
+            r"password\s*=",
+            r"secret\s*=",
+            r"APPROTOKEN",
+            r"BASE64",
         ]
         for pat in patterns:
             assert not re.search(pat, content, re.IGNORECASE), f"Found secret pattern: {pat}"
@@ -77,8 +81,9 @@ class TestSecurityS4:
 
     def test_dockerfile_healthcheck_uses_python3(self):
         content = read("Dockerfile")
-        assert re.search(r"HEALTHCHECK.*python3", content, re.DOTALL), \
-            "Dockerfile HEALTHCHECK should use python3"
+        assert re.search(
+            r"HEALTHCHECK.*python3", content, re.DOTALL
+        ), "Dockerfile HEALTHCHECK should use python3"
 
     def test_dockerfile_healthcheck_not_using_curl(self):
         content = read("Dockerfile")
@@ -90,8 +95,9 @@ class TestSecurityS5:
 
     def test_no_hardcoded_user_in_compose(self):
         content = read("docker-compose.yml")
-        assert not re.search(r"^\s*user:\s*\"?\d+:\d+\"?", content, re.MULTILINE), \
-            "docker-compose.yml should not have hardcoded UID:GID"
+        assert not re.search(
+            r"^\s*user:\s*\"?\d+:\d+\"?", content, re.MULTILINE
+        ), "docker-compose.yml should not have hardcoded UID:GID"
 
 
 class TestSecurityGitIgnore:
@@ -99,8 +105,10 @@ class TestSecurityGitIgnore:
 
     def test_dotenv_gitignored(self):
         from subprocess import run
+
         for f in [".env", ".env.production"]:
-            result = run(["git", "check-ignore", f],  # noqa: S603, S607
+            result = run(  # noqa: S603, S607
+                ["git", "check-ignore", f],
                 cwd=REPO_ROOT,
                 capture_output=True,
                 text=True,
@@ -118,12 +126,15 @@ class TestReliabilityR1:
         content = read("docker-compose.yml")
         # Extract app service block (from 'app:' to next service or networks)
         import re
+
         app_match = re.search(r"app:.*?(?=\n  \w+:|\nnetworks:|\Z)", content, re.DOTALL)
         assert app_match, "Could not find app service block"
         app_section = app_match.group(0)
         assert "SELECT 1" in app_section, "App healthcheck should use 'SELECT 1'"
         assert "sqlite3" in app_section, "App healthcheck should use Python sqlite3 module"
-        assert "urllib" not in app_section, "App healthcheck should NOT use urllib (that's ollama's check)"
+        assert (
+            "urllib" not in app_section
+        ), "App healthcheck should NOT use urllib (that's ollama's check)"
 
 
 class TestReliabilityR2:
@@ -133,6 +144,7 @@ class TestReliabilityR2:
         content = read("docker-compose.yml")
         # Extract ollama service block (from '  ollama:' to next service or networks)
         import re
+
         # Match from the ollama service line (indented) to next service
         ollama_match = re.search(r"\n  ollama:.*?(?=\n  \w+:|\nnetworks:|\Z)", content, re.DOTALL)
         assert ollama_match, "Could not find ollama service block"
@@ -143,6 +155,7 @@ class TestReliabilityR2:
     def test_ollama_healthcheck_no_curl(self):
         content = read("docker-compose.yml")
         import re
+
         ollama_match = re.search(r"\n  ollama:.*?(?=\n  \w+:|\nnetworks:|\Z)", content, re.DOTALL)
         assert ollama_match, "Could not find ollama service block"
         ollama_section = ollama_match.group(0)
@@ -166,7 +179,9 @@ class TestReliabilityR3:
     def test_startup_checker_exits_zero_on_success(self):
         # Smoke-test: startup_checker --help should not crash
         from subprocess import run
-        result = run(["python3", "scripts/startup_checker.py", "--help"],  # noqa: S607
+
+        result = run(
+            ["python3", "scripts/startup_checker.py", "--help"],  # noqa: S607
             cwd=REPO_ROOT,
             capture_output=True,
             text=True,
@@ -193,8 +208,9 @@ class TestReliabilityR5:
 
     def test_logging_config_has_json_handler(self):
         content = read("scripts/logging_config.py")
-        assert "serialize=True" in content, \
-            "logging_config.py must add a serialize=True handler for JSON logs"
+        assert (
+            "serialize=True" in content
+        ), "logging_config.py must add a serialize=True handler for JSON logs"
 
     def test_json_log_uses_compression(self):
         content = read("scripts/logging_config.py")

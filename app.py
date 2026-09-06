@@ -31,6 +31,7 @@ st.set_page_config(
 
 # ── CSS Loading ────────────────────────────────────────────────────────────────
 
+
 def load_css() -> None:
     """Load static/app.css into the page via st.markdown."""
     css_path = Path(__file__).parent / "static" / "app.css"
@@ -51,6 +52,7 @@ SCRIPTS_DIR = "scripts"
 
 # ── Database Connection ────────────────────────────────────────────────────────
 
+
 @st.cache_resource
 def get_db_connection() -> sqlite3.Connection:
     """Cached database connection."""
@@ -63,6 +65,7 @@ def get_db_connection() -> sqlite3.Connection:
 
 
 # ── Data Queries ─────────────────────────────────────────────────────────────
+
 
 @st.cache_data(ttl=300)
 def get_metrics(conn: sqlite3.Connection) -> dict:
@@ -158,9 +161,7 @@ def get_filter_options(conn: sqlite3.Connection) -> dict:
     )
     urgencies = [r[0] for r in c.fetchall() if r[0]]
 
-    c = conn.execute(
-        "SELECT DISTINCT source FROM updates WHERE source IS NOT NULL ORDER BY source"
-    )
+    c = conn.execute("SELECT DISTINCT source FROM updates WHERE source IS NOT NULL ORDER BY source")
     sources = [r[0] for r in c.fetchall() if r[0]]
 
     return {"risk_areas": risk_areas, "urgencies": urgencies, "sources": sources}
@@ -168,8 +169,11 @@ def get_filter_options(conn: sqlite3.Connection) -> dict:
 
 # ── UI Components ─────────────────────────────────────────────────────────────
 
+
 def _urgency_class(level: str) -> str:
-    return {"Urgent": "urgent", "High": "high", "Medium": "medium", "Low": "low"}.get(level, "medium")
+    return {"Urgent": "urgent", "High": "high", "Medium": "medium", "Low": "low"}.get(
+        level, "medium"
+    )
 
 
 def _groundedness_html(score: float | None) -> str:
@@ -221,15 +225,18 @@ def display_metrics_row(metrics: dict) -> None:
                 kw["delta_color"] = delta_col
             st.metric(**kw)
 
-    cell(cols[0], "Total Updates",    metrics.get("total", 0))
-    cell(cols[1], "EBA",              metrics.get("eba_count", 0))
-    cell(cols[2], "MAS",              metrics.get("mas_count", 0))
-    cell(cols[3], "High + Urgent",
-          (metrics.get("urgent", 0) or 0) + (metrics.get("high", 0) or 0),
-          delta_col="inverse")
-    cell(cols[4], "Last 7 Days",     metrics.get("recent_7d", 0))
+    cell(cols[0], "Total Updates", metrics.get("total", 0))
+    cell(cols[1], "EBA", metrics.get("eba_count", 0))
+    cell(cols[2], "MAS", metrics.get("mas_count", 0))
+    cell(
+        cols[3],
+        "High + Urgent",
+        (metrics.get("urgent", 0) or 0) + (metrics.get("high", 0) or 0),
+        delta_col="inverse",
+    )
+    cell(cols[4], "Last 7 Days", metrics.get("recent_7d", 0))
     last = metrics.get("last_update") or "—"
-    cell(cols[5], "Last Update",      str(last)[:10])
+    cell(cols[5], "Last Update", str(last)[:10])
 
 
 def display_filter_panel(options: dict) -> tuple:
@@ -320,7 +327,9 @@ def display_update_card(update: dict) -> None:
                                 f"**Chunk {i}** — chars {chunk.get('char_start','?')}–{chunk.get('char_end','?')} "
                                 f"· `{chunk.get('source_file', 'unknown')}`"
                             )
-                            st.markdown(f"> {chunk.get('chunk_text', '')[:300]}{'…' if len(chunk.get('chunk_text',''))>300 else ''}")
+                            st.markdown(
+                                f"> {chunk.get('chunk_text', '')[:300]}{'…' if len(chunk.get('chunk_text',''))>300 else ''}"
+                            )
                             st.markdown("---")
             except Exception:
                 st.caption("⚠️ Could not parse citation sources.")
@@ -332,6 +341,7 @@ def display_update_card(update: dict) -> None:
 
 
 # ── Page: Dashboard ───────────────────────────────────────────────────────────
+
 
 def page_dashboard() -> None:
     st.markdown('<p class="main-header">🛡️ IT Risk Manager Agent</p>', unsafe_allow_html=True)
@@ -367,6 +377,7 @@ def page_dashboard() -> None:
 
 # ── Page: Scrape & Process ────────────────────────────────────────────────────
 
+
 def page_scrape_process() -> None:
     st.markdown("## 🔄 Scrape & Process")
 
@@ -389,6 +400,7 @@ def page_scrape_process() -> None:
             with st.spinner("Scraping EBA…"):
                 try:
                     from scripts.scrape_eba import scrape_eba
+
                     count = scrape_eba(limit=limit, delay=delay, document_type=doctype)
                     st.success(f"Scraped {count} publication(s).")
                 except Exception as exc:
@@ -401,7 +413,9 @@ def page_scrape_process() -> None:
     st.markdown("### 🌐 Scrape MAS")
     col_limit_m, col_delay_m = st.columns(2)
     with col_limit_m:
-        limit_m = st.number_input("Limit", min_value=1, max_value=100, value=10, key="scrape_mas_limit")
+        limit_m = st.number_input(
+            "Limit", min_value=1, max_value=100, value=10, key="scrape_mas_limit"
+        )
     with col_delay_m:
         from config import Config
 
@@ -411,6 +425,7 @@ def page_scrape_process() -> None:
         with st.spinner("Scraping MAS…"):
             try:
                 from scripts.scrape_mas import scrape_mas
+
                 count = scrape_mas(limit=limit_m, delay=delay_m)
                 st.success(f"Scraped {count} publication(s).")
             except Exception as exc:
@@ -440,6 +455,7 @@ def page_scrape_process() -> None:
 
 # ── Page: Alert Generator ─────────────────────────────────────────────────────
 
+
 def page_alert_generator() -> None:
     st.markdown("## 🚨 Alert Generator")
 
@@ -455,6 +471,7 @@ def page_alert_generator() -> None:
         with st.spinner("Generating alerts…"):
             try:
                 from scripts.generate_alerts import format_alert
+
                 updates = get_updates(conn, days=days)
                 if not updates:
                     st.warning(f"No updates found in the last {days} days.")
@@ -482,6 +499,7 @@ def page_alert_generator() -> None:
 
 # ── Page: Run Migration ───────────────────────────────────────────────────────
 
+
 def page_migration() -> None:
     st.markdown("## 🗄️ Database Migration")
 
@@ -491,9 +509,7 @@ def page_migration() -> None:
     )
 
     conn = get_db_connection()
-    c = conn.execute(
-        "SELECT name FROM sqlite_master WHERE type='table' AND name='schema_version'"
-    )
+    c = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='schema_version'")
     has_version = c.fetchone() is not None
 
     if has_version:
@@ -507,6 +523,7 @@ def page_migration() -> None:
     if st.button("▶️ Run Trust Layer Migration"):
         try:
             from scripts.migrations.add_trust_columns import _apply_migration
+
             _apply_migration(conn, dry_run=False)
             st.success("Migration applied successfully.")
             st.rerun()

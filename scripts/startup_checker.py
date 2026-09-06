@@ -70,6 +70,7 @@ def check_ollama(ollama_host: str, timeout: float = 5.0) -> bool:
         req = urllib.request.Request(url)  # noqa: S310
         with urllib.request.urlopen(req, timeout=timeout) as resp:  # noqa: S310
             import json
+
             data = json.loads(resp.read())
             models = data.get("models", [])
             logger.info(f"[Ollama] OK — {url} ({len(models)} model(s) loaded)")
@@ -107,6 +108,7 @@ def check_raw_dirs(eba_dir: str, mas_dir: str, strict: bool = False) -> bool:
 
 
 # ── CLI ───────────────────────────────────────────────────────────────────────
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Pre-startup health verification")

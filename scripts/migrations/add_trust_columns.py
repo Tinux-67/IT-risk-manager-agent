@@ -36,9 +36,7 @@ def _get_connection(db_path: Path) -> sqlite3.Connection:
 
 
 def _column_exists(conn: sqlite3.Connection, table: str, column: str) -> bool:
-    rows = conn.execute(
-        f"PRAGMA table_info({table})"
-    ).fetchall()
+    rows = conn.execute(f"PRAGMA table_info({table})").fetchall()
     return column in {row[1] for row in rows}
 
 
@@ -53,7 +51,9 @@ def _table_exists(conn: sqlite3.Connection, table: str) -> bool:
 def _get_schema_version(conn: sqlite3.Connection) -> int:
     if not _table_exists(conn, "schema_version"):
         return 1  # Original schema before this migration
-    row = conn.execute("SELECT version FROM schema_version ORDER BY version DESC LIMIT 1").fetchone()
+    row = conn.execute(
+        "SELECT version FROM schema_version ORDER BY version DESC LIMIT 1"
+    ).fetchone()
     return int(row[0]) if row else 1
 
 
@@ -95,9 +95,7 @@ def _apply_migration(conn: sqlite3.Connection, dry_run: bool = False) -> None:
                 created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
-        conn.execute(
-            "CREATE INDEX IF NOT EXISTS idx_chunk_update ON raw_chunks(update_id)"
-        )
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_chunk_update ON raw_chunks(update_id)")
 
     # ── Record schema version ────────────────────────────────────────────────
     if not _table_exists(conn, "schema_version"):

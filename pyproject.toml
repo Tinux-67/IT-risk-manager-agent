@@ -120,6 +120,8 @@ ignore = [
     "B008",  # do not perform function calls in argument defaults
     "S101",  # assert used
     "T201",  # print found (allowed in CLI scripts)
+    "S603",  # subprocess call with check for execution of untrusted input (test file)
+    "S607",  # starting a process with a partial executable path (test file)
 ]
 fixable = ["ALL"]
 unfixable = []

@@ -421,6 +421,8 @@ def _process_file_impl(
         # Trust layer is skipped entirely if the document fails quality gate.
         risk_area = categorize_risk_area(raw_text, conn)
         urgency = assess_urgency(raw_text, conn)
+
+        # First INSERT to get update_id, then run trust layer with retrieval-based summary
         summary = generate_summary(raw_text, conn)
 
         low_quality_summaries = {
@@ -521,16 +523,29 @@ def _process_file_impl(
             chunk_count_val = 0
 
             try:
+                from scripts.retrieval import retrieve_chunks
+
                 chunks = chunk_text(raw_text, file_path, update_id, conn)
                 chunk_count_val = len(chunks)
 
                 if chunks:
-                    chunk_context = "\n\n".join(
-                        f"[Chunk {c['chunk_index']}] {c['chunk_text']}" for c in chunks
-                    )
+                    # Use retrieval to get most relevant chunks for the risk area
+                    query = f"Risk area: {risk_area}. Urgency: {urgency}."
+                    retrieved_chunks = retrieve_chunks(query, update_id, conn, top_k=5)
+
+                    if retrieved_chunks:
+                        chunk_context = "\n\n".join(
+                            f"[Chunk {c['chunk_index']}] {c['chunk_text']}"
+                            for c in retrieved_chunks
+                        )
+                    else:
+                        # Fallback to all chunks if retrieval returns nothing
+                        chunk_context = "\n\n".join(
+                            f"[Chunk {c['chunk_index']}] {c['chunk_text']}" for c in chunks
+                        )
                     reason_prompt = LLM_PROMPTS["retrieve_and_reason"].format(
                         chunks=chunk_context,
-                        query=f"Risk area: {risk_area}. Urgency: {urgency}.",
+                        query=query,
                     )
                     reason_response = get_ollama_response(reason_prompt, conn=conn)
 
@@ -556,7 +571,7 @@ def _process_file_impl(
                             reasoning_chain = reason_response
                             citation_sources_json = "[]"
 
-                    # Veracity scoring
+                    # Veracity scoring - score groundedness of summary against cited chunks
                     if summary and citation_sources_json not in ("", "[]"):
                         try:
                             cited_chunks_list = _json.loads(citation_sources_json)
@@ -566,8 +581,26 @@ def _process_file_impl(
                                 summary=summary,
                                 conn=conn,
                             )
+                            logger.debug(
+                                f"Groundedness score for {filename}: {groundedness_score_val}"
+                            )
                         except Exception as exc:
                             logger.warning(f"Veracity scoring failed for {filename}: {exc}")
+                            groundedness_score_val = None
+                    else:
+                        # No citations, score based on full text
+                        if summary:
+                            try:
+                                groundedness_score_val = score_groundedness(
+                                    cited_text=raw_text[:4000],
+                                    summary=summary,
+                                    conn=conn,
+                                )
+                            except Exception as exc:
+                                logger.warning(
+                                    f"Veracity scoring (fallback) failed for {filename}: {exc}"
+                                )
+                                groundedness_score_val = None
 
                 logger.debug(
                     f"Trust layer done for {filename}: chunks={chunk_count_val}, "

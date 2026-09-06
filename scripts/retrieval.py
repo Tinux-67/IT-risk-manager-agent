@@ -97,10 +97,11 @@ def chunk_text(
         cursor = conn.execute(
             """
             INSERT INTO raw_chunks
-                (update_id, chunk_text, char_start, char_end, source_file, chunk_index)
-            VALUES (?, ?, ?, ?, ?, ?)
+                (update_id, chunk_text, char_start, char_end, source_file, chunk_index,
+                 retriever_version, chunking_version)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (update_id, chunk_str, char_start, char_end, source_file, idx),
+            (update_id, chunk_str, char_start, char_end, source_file, idx, "v1", "v1"),
         )
         rows.append(
             {
@@ -111,6 +112,8 @@ def chunk_text(
                 "char_end": char_end,
                 "source_file": source_file,
                 "chunk_index": idx,
+                "retriever_version": "v1",
+                "chunking_version": "v1",
             }
         )
 

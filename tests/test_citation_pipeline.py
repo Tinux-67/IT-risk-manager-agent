@@ -37,7 +37,9 @@ def make_temp_db() -> tuple[Path, sqlite3.Connection]:
             char_start   INTEGER NOT NULL,
             char_end     INTEGER NOT NULL,
             source_file  TEXT    NOT NULL,
-            chunk_index  INTEGER NOT NULL
+            chunk_index  INTEGER NOT NULL,
+            retriever_version TEXT DEFAULT 'v1',
+            chunking_version TEXT DEFAULT 'v1'
         );
     """)
     conn.commit()
@@ -247,3 +249,114 @@ class TestMigrationIdempotent:
         ).fetchone()[0]
         conn.close()
         assert version == SCHEMA_VERSION
+
+
+#  Trust Layer Integration Tests 
+
+
+class TestTrustLayerIntegration:
+    """Integration tests for retrieval + veracity in process_updates.py."""
+
+    def test_retrieval_integrated_in_trust_layer(self, tmp_path: Path):
+        """Verify that retrieve_chunks is called during trust layer processing."""
+        from scripts.process_updates import _process_file_impl
+
+        # Create test DB with schema
+        db_path = tmp_path / "test.db"
+        conn = sqlite3.connect(str(db_path))
+        conn.executescript("""
+            CREATE TABLE updates (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                source_url TEXT,
+                file_path TEXT,
+                publication_date TEXT,
+                processed_date TEXT DEFAULT CURRENT_TIMESTAMP,
+                raw_text TEXT,
+                summary TEXT,
+                risk_area TEXT,
+                urgency_level TEXT,
+                source TEXT DEFAULT 'EBA',
+                is_processed BOOLEAN DEFAULT 0,
+                citation_sources TEXT,
+                reasoning_chain TEXT,
+                groundedness_score REAL,
+                chunk_count INTEGER DEFAULT 0
+            );
+            CREATE TABLE raw_chunks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                update_id INTEGER REFERENCES updates(id) ON DELETE CASCADE,
+                chunk_text TEXT NOT NULL,
+                char_start INTEGER NOT NULL,
+                char_end INTEGER NOT NULL,
+                source_file TEXT NOT NULL,
+                chunk_index INTEGER NOT NULL,
+                retriever_version TEXT DEFAULT 'v1',
+                chunking_version TEXT DEFAULT 'v1'
+            );
+            CREATE TABLE ollama_cache (
+                cache_key TEXT PRIMARY KEY,
+                model TEXT NOT NULL,
+                prompt TEXT NOT NULL,
+                response TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                expires_at TIMESTAMP
+            );
+        """)
+        conn.commit()
+
+        # Create a test HTML file (easier to parse than PDF in tests)
+        html_path = tmp_path / "test.html"
+        html_path.write_text(
+            "<html><body><p>Test regulatory document content for IT Risk Management.</p></body></html>"
+        )
+
+        # Process the file (trust layer will run)
+        success, filename = _process_file_impl(str(html_path), conn, run_trust_layer=True)
+
+        # Verify the file was processed
+        assert success
+        row = conn.execute(
+            "SELECT * FROM updates WHERE file_path = ?", (str(html_path),)
+        ).fetchone()
+        assert row is not None
+        assert row[10] is not None  # citation_sources
+        assert row[12] is not None  # groundedness_score
+
+        conn.close()
+
+    def test_chunk_text_populates_version_columns(self, tmp_path: Path):
+        """Verify chunk_text populates retriever_version and chunking_version."""
+        from scripts.retrieval import chunk_text
+
+        db_path = tmp_path / "test.db"
+        conn = sqlite3.connect(str(db_path))
+        conn.executescript("""
+            CREATE TABLE updates (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT);
+            INSERT INTO updates (id, title) VALUES (1, 'Test');
+            CREATE TABLE raw_chunks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                update_id INTEGER REFERENCES updates(id) ON DELETE CASCADE,
+                chunk_text TEXT NOT NULL,
+                char_start INTEGER NOT NULL,
+                char_end INTEGER NOT NULL,
+                source_file TEXT NOT NULL,
+                chunk_index INTEGER NOT NULL,
+                retriever_version TEXT DEFAULT 'v1',
+                chunking_version TEXT DEFAULT 'v1'
+            );
+        """)
+        conn.commit()
+
+        chunks = chunk_text("test content", "test.pdf", 1, conn)
+        assert len(chunks) == 1
+        assert chunks[0]["retriever_version"] == "v1"
+        assert chunks[0]["chunking_version"] == "v1"
+
+        # Verify in DB
+        row = conn.execute(
+            "SELECT retriever_version, chunking_version FROM raw_chunks WHERE update_id = 1"
+        ).fetchone()
+        assert row[0] == "v1"
+        assert row[1] == "v1"
+        conn.close()

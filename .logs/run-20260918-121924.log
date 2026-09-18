@@ -1,0 +1,18 @@
+============================= test session starts ==============================
+platform linux -- Python 3.14.4, pytest-9.1.1, pluggy-1.6.0 -- /home/ubuntu/.openclaw/workspace-forge/venv/bin/python
+cachedir: .pytest_cache
+rootdir: /home/ubuntu/.openclaw/workspace-forge
+plugins: anyio-4.15.1
+collecting ... collected 9 items
+
+test_acceptance.py::test_at1_componenten_retourneren_string_niet_none PASSED [ 11%]
+test_acceptance.py::test_at1_componenten_bevatten_geen_streamlit_calls PASSED [ 22%]
+test_acceptance.py::test_at1_geen_string_none_in_output PASSED           [ 33%]
+test_acceptance.py::test_at1_statusdistributie_zonder_none PASSED        [ 44%]
+test_acceptance.py::test_at2_data_is_plat_zonder_html_tags PASSED        [ 55%]
+test_acceptance.py::test_at2_renderpad_gebruikt_unsafe_allow_html PASSED [ 66%]
+test_acceptance.py::test_at3_css_bevat_geen_verticale_regels PASSED      [ 77%]
+test_acceptance.py::test_at3_design_system_css_controleren PASSED        [ 88%]
+test_acceptance.py::test_integratie_volledige_risicopagina_zonder_defecten PASSED [100%]
+
+============================== 9 passed in 0.33s ===============================

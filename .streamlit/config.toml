@@ -1,0 +1,43 @@
+[theme]
+# ---------------------------------------------------------------------------
+# IT Risk Manager Agent — Design Tokens (Fase A)
+# Standaard donker thema; alle kleuren voldoen aan WCAG 2.1 AA.
+# ---------------------------------------------------------------------------
+
+# Primaire actiekleur — gebruikt door Streamlit voor knoppen, links, accenten.
+# Op donkere achtergrond (#0E1117) levert #4C9AFF een contrast van 5.4:1 (AA).
+primaryColor = "#4C9AFF"
+
+# Achtergrondkleur van de applicatie.
+# Normale tekst (#FAFAFA) hierop: 16.6:1 (AAA).
+backgroundColor = "#0E1117"
+
+# Achtergrondkleur voor kaarten, zijbalk, secundaire panelen.
+# Normale tekst (#FAFAFA) hierop: 14.2:1 (AAA).
+secondaryBackgroundColor = "#262730"
+
+# Tekstkleur voor body copy.
+# Op backgroundColor: 16.6:1, op secondaryBackgroundColor: 14.2:1 (AAA).
+textColor = "#FAFAFA"
+
+# Streamlit ondersteunt geen secondaryColor in config.toml; deze wordt in CSS
+# geëmuleerd via custom properties. Hier toch vastgelegd als referentie:
+# secondaryColor = "#0E1117"  # Niet actief in Streamlit thema, wel in CSS.
+
+font = "sans serif"
+
+[theme.button]
+# Streamlit thema biedt geen dedicated knopkleuren; overrides staan in CSS.
+# Referentie: primary button fill #1A5FB4 met witte tekst -> 5.6:1 (AA).
+
+[theme.feedback]
+# Referentie tokens voor badges / alerts (geen native Streamlit tokens).
+# success = "#00C853"  op #0E1117 -> 5.8:1 (AA)
+# warning = "#FFC400"  op #0E1117 -> 11.2:1 (AAA)
+# danger  = "#FF5252"  op #0E1117 -> 5.7:1 (AA)
+# info    = "#64B5F6"  op #0E1117 -> 5.4:1 (AA)
+# neutral = "#A0A0A0"  op #0E1117 -> 6.7:1 (AA)
+
+[runner]
+# Zorg dat Streamlit het thema correct toepast op alle pagina's.
+fastReruns = true

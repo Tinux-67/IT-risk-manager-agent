@@ -1,0 +1,376 @@
+/* ==========================================================================
+   IT Risk Manager Agent — Design System CSS (Fase A)
+   Gebruik in combinatie met .streamlit/config.toml.
+   Alle kleuren zijn gekoppeld aan CSS custom properties voor centraal beheer.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. Design Tokens
+   -------------------------------------------------------------------------- */
+:root {
+  /* Streamlit thema tokens (gesynchroniseerd met config.toml) */
+  --itrm-primary: #4C9AFF;
+  --itrm-primary-dark: #1A5FB4;      /* knoppen, hover, actieve elementen */
+  --itrm-bg: #0E1117;
+  --itrm-bg-secondary: #262730;
+  --itrm-text: #FAFAFA;
+  --itrm-text-muted: #A0A0A0;
+  --itrm-text-muted-2: #B0B0B0;
+  --itrm-font: "Source Sans Pro", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  /* Feedback tokens */
+  --itrm-success: #00C853;
+  --itrm-success-bg: rgba(0, 200, 83, 0.12);
+  --itrm-warning: #FFC400;
+  --itrm-warning-bg: rgba(255, 196, 0, 0.12);
+  --itrm-danger: #FF5252;
+  --itrm-danger-bg: rgba(255, 82, 82, 0.12);
+  --itrm-info: #64B5F6;
+  --itrm-info-bg: rgba(100, 181, 246, 0.12);
+  --itrm-neutral: #A0A0A0;
+  --itrm-neutral-bg: rgba(160, 160, 160, 0.12);
+
+  /* Spacing & sizing */
+  --itrm-radius-sm: 4px;
+  --itrm-radius-md: 8px;
+  --itrm-radius-lg: 12px;
+  --itrm-space-xs: 0.25rem;
+  --itrm-space-sm: 0.5rem;
+  --itrm-space-md: 1rem;
+  --itrm-space-lg: 1.5rem;
+  --itrm-space-xl: 2rem;
+
+  /* Focus ring */
+  --itrm-focus-ring: 0 0 0 3px rgba(76, 154, 255, 0.5);
+}
+
+/* --------------------------------------------------------------------------
+   2. Global resets / Streamlit overrides
+   -------------------------------------------------------------------------- */
+body {
+  background-color: var(--itrm-bg) !important;
+  color: var(--itrm-text) !important;
+  font-family: var(--itrm-font) !important;
+}
+
+.stApp {
+  background-color: var(--itrm-bg) !important;
+}
+
+/* Headings */
+h1, h2, h3, h4, h5, h6,
+.stMarkdown h1, .stMarkdown h2, .stMarkdown h3 {
+  color: var(--itrm-text) !important;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.stMarkdown p, .stMarkdown li, .stMarkdown span {
+  color: var(--itrm-text) !important;
+}
+
+.stMarkdown a {
+  color: var(--itrm-primary) !important;
+  text-decoration: underline;
+}
+
+.stMarkdown a:hover {
+  color: var(--itrm-primary-dark) !important;
+}
+
+.stMarkdown a:focus-visible,
+a:focus-visible,
+button:focus-visible,
+[tabindex]:focus-visible {
+  outline: none !important;
+  box-shadow: var(--itrm-focus-ring) !important;
+  border-radius: var(--itrm-radius-sm);
+}
+
+/* --------------------------------------------------------------------------
+   3. Buttons
+   -------------------------------------------------------------------------- */
+.stButton > button {
+  background-color: var(--itrm-primary-dark) !important;
+  color: #FFFFFF !important;
+  border: 2px solid transparent !important;
+  border-radius: var(--itrm-radius-md) !important;
+  padding: 0.55rem 1.1rem !important;
+  font-weight: 600 !important;
+  font-size: 0.95rem !important;
+  transition: background-color 150ms ease, border-color 150ms ease, transform 50ms ease !important;
+  min-height: 2.5rem !important;
+}
+
+.stButton > button:hover {
+  background-color: var(--itrm-primary) !important;
+  color: #0E1117 !important;
+}
+
+.stButton > button:active {
+  transform: translateY(1px);
+}
+
+/* Variant classes — gebruik via st.markdown("<span class='...'>") wrapper
+   of via custom Streamlit container class injection in Python helpers */
+.itrm-btn-secondary > button {
+  background-color: transparent !important;
+  color: var(--itrm-text) !important;
+  border-color: var(--itrm-text-muted) !important;
+}
+
+.itrm-btn-secondary > button:hover {
+  background-color: rgba(250, 250, 250, 0.08) !important;
+}
+
+.itrm-btn-danger > button {
+  background-color: #D32F2F !important;
+  color: #FFFFFF !important;
+}
+
+.itrm-btn-danger > button:hover {
+  background-color: var(--itrm-danger) !important;
+}
+
+.itrm-btn-ghost > button {
+  background-color: transparent !important;
+  color: var(--itrm-primary) !important;
+  border-color: transparent !important;
+}
+
+.itrm-btn-ghost > button:hover {
+  background-color: rgba(76, 154, 255, 0.12) !important;
+}
+
+/* Disabled state */
+.stButton > button:disabled,
+.stButton > button[disabled] {
+  opacity: 0.5 !important;
+  cursor: not-allowed !important;
+}
+
+/* --------------------------------------------------------------------------
+   4. Cards
+   -------------------------------------------------------------------------- */
+.itrm-card {
+  background-color: var(--itrm-bg-secondary);
+  border: 1px solid rgba(250, 250, 250, 0.08);
+  border-radius: var(--itrm-radius-lg);
+  padding: var(--itrm-space-lg);
+  margin-bottom: var(--itrm-space-md);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.itrm-card__title {
+  color: var(--itrm-text);
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: var(--itrm-space-sm);
+}
+
+.itrm-card__body {
+  color: var(--itrm-text);
+}
+
+.itrm-metric-card {
+  background-color: var(--itrm-bg-secondary);
+  border-left: 4px solid var(--itrm-primary);
+  border-radius: var(--itrm-radius-md);
+  padding: var(--itrm-space-md);
+  margin-bottom: var(--itrm-space-md);
+}
+
+.itrm-metric-card__label {
+  color: var(--itrm-text-muted);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: var(--itrm-space-xs);
+}
+
+.itrm-metric-card__value {
+  color: var(--itrm-text);
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.itrm-metric-card__delta {
+  font-size: 0.85rem;
+  margin-top: var(--itrm-space-xs);
+}
+
+.itrm-risk-card {
+  background-color: var(--itrm-bg-secondary);
+  border-radius: var(--itrm-radius-lg);
+  padding: var(--itrm-space-lg);
+  margin-bottom: var(--itrm-space-md);
+  border-left: 4px solid var(--itrm-neutral);
+}
+
+.itrm-risk-card--critical { border-left-color: var(--itrm-danger); }
+.itrm-risk-card--high     { border-left-color: #FF8A65; }
+.itrm-risk-card--medium   { border-left-color: var(--itrm-warning); }
+.itrm-risk-card--low      { border-left-color: var(--itrm-success); }
+
+/* --------------------------------------------------------------------------
+   5. Badges
+   -------------------------------------------------------------------------- */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--itrm-space-xs);
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+
+.badge-success { background-color: var(--itrm-success-bg); color: var(--itrm-success); }
+.badge-warning { background-color: var(--itrm-warning-bg); color: #0E1117; }
+.badge-danger  { background-color: var(--itrm-danger-bg); color: var(--itrm-danger); }
+.badge-neutral { background-color: var(--itrm-neutral-bg); color: var(--itrm-text); }
+.badge-info    { background-color: var(--itrm-info-bg); color: var(--itrm-info); }
+
+/* --------------------------------------------------------------------------
+   6. Alerts
+   -------------------------------------------------------------------------- */
+.itrm-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--itrm-space-sm);
+  padding: var(--itrm-space-md);
+  border-radius: var(--itrm-radius-md);
+  margin-bottom: var(--itrm-space-md);
+  border: 1px solid transparent;
+}
+
+.itrm-alert__icon {
+  flex-shrink: 0;
+  font-size: 1.1rem;
+  line-height: 1.4;
+}
+
+.itrm-alert__content {
+  flex: 1;
+  color: var(--itrm-text);
+}
+
+.itrm-alert--error   { background-color: var(--itrm-danger-bg);  border-color: rgba(255, 82, 82, 0.3); }
+.itrm-alert--success { background-color: var(--itrm-success-bg); border-color: rgba(0, 200, 83, 0.3); }
+.itrm-alert--warning { background-color: var(--itrm-warning-bg); border-color: rgba(255, 196, 0, 0.3); }
+.itrm-alert--info    { background-color: var(--itrm-info-bg);    border-color: rgba(100, 181, 246, 0.3); }
+
+/* --------------------------------------------------------------------------
+   7. Metric / DataFrame overrides
+   -------------------------------------------------------------------------- */
+.stMetric {
+  background-color: var(--itrm-bg-secondary);
+  border-radius: var(--itrm-radius-md);
+  padding: var(--itrm-space-md);
+}
+
+.stMetric > div[data-testid="stMetricValue"] {
+  color: var(--itrm-text) !important;
+  font-weight: 700;
+  font-size: 1.6rem;
+}
+
+.stMetric > div[data-testid="stMetricLabel"] {
+  color: var(--itrm-text-muted) !important;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.stDataFrame,
+.stDataFrame table {
+  background-color: var(--itrm-bg-secondary) !important;
+  color: var(--itrm-text) !important;
+  border-radius: var(--itrm-radius-md);
+}
+
+.stDataFrame th {
+  background-color: rgba(250, 250, 250, 0.06) !important;
+  color: var(--itrm-text) !important;
+  font-weight: 600;
+}
+
+.stDataFrame td {
+  color: var(--itrm-text) !important;
+}
+
+.stDataFrame tr:hover td {
+  background-color: rgba(76, 154, 255, 0.08) !important;
+}
+
+/* --------------------------------------------------------------------------
+   8. Form / input overrides
+   -------------------------------------------------------------------------- */
+.stTextInput input,
+.stTextArea textarea,
+.stSelectbox > div > div,
+.stNumberInput input {
+  background-color: var(--itrm-bg-secondary) !important;
+  color: var(--itrm-text) !important;
+  border: 1px solid rgba(250, 250, 250, 0.15) !important;
+  border-radius: var(--itrm-radius-md) !important;
+}
+
+.stTextInput input:focus,
+.stTextArea textarea:focus,
+.stSelectbox > div > div:focus-within,
+.stNumberInput input:focus {
+  border-color: var(--itrm-primary) !important;
+  box-shadow: var(--itrm-focus-ring) !important;
+}
+
+/* --------------------------------------------------------------------------
+   9. Responsive breakpoints
+   -------------------------------------------------------------------------- */
+@media (max-width: 768px) {
+  .itrm-card,
+  .itrm-risk-card {
+    padding: var(--itrm-space-md);
+  }
+
+  .itrm-metric-card__value {
+    font-size: 1.4rem;
+  }
+
+  .stButton > button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  h1 { font-size: 1.6rem; }
+  h2 { font-size: 1.35rem; }
+  h3 { font-size: 1.15rem; }
+}
+
+@media (max-width: 480px) {
+  .itrm-card,
+  .itrm-risk-card {
+    padding: var(--itrm-space-sm);
+    border-radius: var(--itrm-radius-md);
+  }
+
+  .itrm-metric-card__value {
+    font-size: 1.25rem;
+  }
+
+  .badge {
+    font-size: 0.7rem;
+    padding: 0.1rem 0.45rem;
+  }
+
+  .itrm-alert {
+    padding: var(--itrm-space-sm);
+    flex-direction: column;
+    gap: var(--itrm-space-xs);
+  }
+}

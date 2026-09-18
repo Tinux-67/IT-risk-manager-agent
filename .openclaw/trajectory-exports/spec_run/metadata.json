@@ -1,0 +1,304 @@
+{
+  "traceSchema": "openclaw-trajectory",
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-03T19:29:17.344Z",
+  "traceId": "191083ce-74eb-4840-9b7c-7b974cb158df",
+  "sessionId": "191083ce-74eb-4840-9b7c-7b974cb158df",
+  "sessionKey": "agent:atelier:dashboard:51328922-e79e-486f-90e9-cfe59f9f2a53",
+  "harness": {
+    "type": "openclaw",
+    "name": "OpenClaw",
+    "version": "2026.8.2",
+    "os": {
+      "platform": "linux",
+      "arch": "x64",
+      "release": "7.0.0-30-generic",
+      "label": "linux 7.0.0-30-generic (x64)"
+    },
+    "runtime": {
+      "node": "v22.23.2"
+    },
+    "invocation": [
+      "/usr/bin/node",
+      "~/.npm-global/lib/node_modules/openclaw/dist/index.js",
+      "gateway",
+      "--port",
+      "18789"
+    ],
+    "entrypoint": "~/.npm-global/lib/node_modules/openclaw/dist/index.js",
+    "workspaceDir": "$OPENCLAW_STATE_DIR/workspace-atelier",
+    "sessionFile": "~/agent:atelier:dashboard:51328922-e79e-486f-90e9-cfe59f9f2a53"
+  },
+  "model": {
+    "provider": "ollama-cloud",
+    "name": "gemma4:31b",
+    "api": "ollama",
+    "fastMode": false,
+    "thinkLevel": "off",
+    "reasoningLevel": "on"
+  },
+  "config": {
+    "redacted": {
+      "meta": {
+        "lastTouchedVersion": "2026.8.2",
+        "migrations": {
+          "modelPolicyAllowlist": true
+        }
+      },
+      "wizard": {
+        "accessMode": "full",
+        "lastRunAt": "2026-09-03T14:42:16.325Z",
+        "lastRunVersion": "2026.8.2",
+        "lastRunCommand": "doctor",
+        "lastRunMode": "local",
+        "securityAcknowledgedAt": "2026-08-16T12:50:40.746Z"
+      },
+      "telemetry": {
+        "enabled": true,
+        "consentedAt": "2026-08-31T19:22:41.538Z"
+      },
+      "browser": {
+        "noSandbox": true,
+        "ssrfPolicy": {
+          "allowedHostnames": [
+            "github.com",
+            "*.github.com",
+            "stackoverflow.com",
+            "npmjs.com",
+            "pypi.org",
+            "developer.mozilla.org",
+            "docs.python.org",
+            "react.dev",
+            "streamlit.io",
+            "tailwindcss.com",
+            "ubuntu.com",
+            "docker.com",
+            "tailscale.com",
+            "home-assistant.io",
+            "wikipedia.org",
+            "wttr.in"
+          ]
+        }
+      },
+      "ui": {
+        "prefs": {
+          "theme": "phosphor"
+        }
+      },
+      "secrets": {
+        "providers": {
+          "default": {
+            "source": "__OPENCLAW_REDACTED__"
+          }
+        }
+      },
+      "auth": {
+        "profiles": {
+          "ollama-cloud:default": {
+            "provider": "ollama-cloud",
+            "mode": "api_key"
+          },
+          "ollama-cloud:setup-5066d5b5-7550-42c3-8377-5b1f856668d5": {
+            "provider": "ollama-cloud",
+            "mode": "api_key"
+          },
+          "ollama-cloud:setup-ad9350b5-e82e-4812-80b7-99326f95cd30": {
+            "provider": "ollama-cloud",
+            "mode": "api_key"
+          },
+          "mistral:manual": {
+            "provider": "mistral",
+            "mode": "api_key"
+          }
+        }
+      },
+      "models": {
+        "providers": {
+          "ollama": {
+            "baseUrl": "https://ollama.com",
+            "models": {
+              "truncated": true,
+              "reason": "trajectory-depth-limit",
+              "limitDepth": 6
+            }
+          }
+        }
+      },
+      "agents": {
+        "ownership": "explicit",
+        "defaults": {
+          "model": {
+            "primary": "ollama-cloud/gemma4:31b",
+            "fallbacks": {
+              "truncated": true,
+              "reason": "trajectory-depth-limit",
+              "limitDepth": 6
+            }
+          },
+          "utilityModel": "ollama-cloud/deepseek-v4-flash:0731",
+          "models": {
+            "ollama-cloud/kimi-k2.5:cloud": {
+              "truncated": true,
+              "reason": "trajectory-depth-limit",
+              "limitDepth": 6
+            },
+            "ollama-cloud/qwen3.5:397b": {
+              "truncated": true,
+              "reason": "trajectory-depth-limit",
+              "limitDepth": 6
+            },
+            "ollama-cloud/mistral-large-3:675b": {
+              "truncated": true,
+              "reason": "trajectory-depth-limit",
+              "limitDepth": 6
+            },
+            "ollama-cloud/glm-5.1": {
+              "truncated": true,
+              "reason": "trajectory-depth-limit",
+              "limitDepth": 6
+            },
+            "ollama-cloud/kimi-k2.7-code": {
+              "truncated": true,
+              "reason": "trajectory-depth-limit",
+              "limitDepth": 6
+            },
+            "ollama-cloud/kimi-k3": {
+              "truncated": true,
+              "reason": "trajectory-depth-limit",
+              "limitDepth": 6
+            },
+            "ollama-cloud/minimax-m3": {
+              "truncated": true,
+              "reason": "trajectory-depth-limit",
+              "limitDepth": 6
+            },
+            "ollama-cloud/gpt-oss:20b": {
+              "truncated": true,
+              "reason": "trajectory-depth-limit",
+              "limitDepth": 6
+            },
+            "ollama-cloud/glm-5.2": {
+              "truncated": true,
+              "reason": "trajectory-depth-limit",
+              "limitDepth": 6
+            },
+            "ollama-cloud/deepseek-v4-pro:preview": {
+              "truncated": true,
+              "reason": "trajectory-depth-limit",
+              "limitDepth": 6
+            },
+            "ollama-cloud/minimax-m2.7": {
+              "truncated": true,
+              "reason": "trajectory-depth-limit",
+              "limitDepth": 6
+            },
+            "ollama-cloud/kimi-k2.6": {
+              "truncated": true,
+              "reason": "trajectory-depth-limit",
+              "limitDepth": 6
+            },
+            "ollama-cloud/deepseek-v4-flash:0731": {
+              "truncated": true,
+              "reason": "trajectory-depth-limit",
+              "limitDepth": 6
+            },
+            "ollama-cloud/gemma4:31b": {
+              "truncated": true,
+              "reason": "trajectory-depth-limit",
+              "limitDepth": 6
+            },
+            "ollama-cloud/nemotron-3-ultra": {
+              "truncated": true,
+              "reason": "trajectory-depth-limit",
+              "limitDepth": 6
+            },
+            "ollama-cloud/nemotron-3-super": {
+              "truncated": true,
+              "reason": "trajectory-depth-limit",
+              "limitDepth": 6
+            },
+            "ollama-cloud/deepseek-v4-flash:preview": {
+              "truncated": true,
+              "reason": "trajectory-depth-limit",
+              "limitDepth": 6
+            },
+            "ollama-cloud/nemotron-3-nano:30b": {
+              "truncated": true,
+              "reason": "trajectory-depth-limit",
+              "limitDepth": 6
+            },
+            "ollama-cloud/deepseek-v4-pro:0813": {
+              "truncated": true,
+              "reason": "trajectory-depth-limit",
+              "limitDepth": 6
+            },
+            "ollama-cloud/gpt-oss:120b": {
+              "truncated": true,
+              "reason": "trajectory-depth-limit",
+              "limitDepth": 6
+            },
+            "ollama-cloud/glm-5.2:cloud": {
+              "truncated": true,
+              "reason": "trajectory-depth-limit",
+              "limitDepth": 6
+            }
+          },
+          "modelPolicy": {
+            "allow": {
+              "truncated": true,
+              "reason": "trajectory-depth-limit",
+              "limitDepth": 6
+            }
+          },
+          "workspace": "$OPENCLAW_STATE_DIR/workspace",
+          "contextInjection": "always",
+          "bootstrapMaxChars": 20000,
+          "bootstrapTotalMaxChars": 150000,
+          "heartbeat": {
+            "agentId": "main"
+          },
+          "systemAgent": {
+            "agentId": "main"
+          },
+          "subagents": {
+            "maxConcurrent": 4,
+            "model": "ollama-cloud/kimi-k2.7-code",
+            "runTimeoutSeconds": 900,
+            "archiveAfterMinutes": 60
+          },
+          "maxConcurrent": 8,
+          "compaction": {
+            "mode": "safeguard"
+          }
+        },
+        "entries": {
+          "main": {
+            "workspace": "$OPENCLAW_STATE_DIR/workspace",
+            "model": "ollama-cloud/kimi-k3",
+            "models": "[Truncated]",
+            "subagents": "[Truncated]"
+          },
+          "forge": "[Truncated]",
+          "atelier": "[Truncated]"
+        }
+      },
+      "tools": "[Truncated]",
+      "bindings": "[Truncated]",
+      "commands": "[Truncated]",
+      "session": "***",
+      "channels": "[Truncated]",
+      "talk": "[Truncated]",
+      "gateway": "[Truncated]",
+      "memory": "[Truncated]",
+      "skills": "[Truncated]",
+      "plugins": "[Truncated]",
+      "messages": "[Truncated]"
+    },
+    "runtime": "[Truncated]"
+  },
+  "plugins": "[Truncated]",
+  "skills": "[Truncated]",
+  "prompting": "[Truncated]",
+  "redaction": "[Truncated]",
+  "metadata": "[Truncated]"
+}

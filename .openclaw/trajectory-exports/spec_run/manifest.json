@@ -1,0 +1,58 @@
+{
+  "traceSchema": "openclaw-trajectory",
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-03T19:29:17.343Z",
+  "traceId": "191083ce-74eb-4840-9b7c-7b974cb158df",
+  "sessionId": "191083ce-74eb-4840-9b7c-7b974cb158df",
+  "sessionKey": "agent:atelier:dashboard:51328922-e79e-486f-90e9-cfe59f9f2a53",
+  "workspaceDir": "$WORKSPACE_DIR",
+  "leafId": "2957b1f2-ab36-44fd-96c2-4e59b973623a",
+  "eventCount": 31,
+  "runtimeEventCount": 7,
+  "transcriptEventCount": 24,
+  "sourceFiles": {
+    "session": "agent:…2a53"
+  },
+  "supplementalFiles": [
+    "metadata.json",
+    "artifacts.json",
+    "prompts.json"
+  ],
+  "contents": [
+    {
+      "path": "metadata.json",
+      "mediaType": "application/json",
+      "bytes": 9095
+    },
+    {
+      "path": "artifacts.json",
+      "mediaType": "application/json",
+      "bytes": 6988
+    },
+    {
+      "path": "prompts.json",
+      "mediaType": "application/json",
+      "bytes": 1163
+    },
+    {
+      "path": "events.jsonl",
+      "mediaType": "application/x-ndjson",
+      "bytes": 53836
+    },
+    {
+      "path": "session-branch.json",
+      "mediaType": "application/json",
+      "bytes": 10213
+    },
+    {
+      "path": "system-prompt.txt",
+      "mediaType": "text/plain; charset=utf-8",
+      "bytes": 37
+    },
+    {
+      "path": "tools.json",
+      "mediaType": "application/json",
+      "bytes": 10339
+    }
+  ]
+}

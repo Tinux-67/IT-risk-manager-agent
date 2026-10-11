@@ -37,3 +37,16 @@ FLOW: Spec → Code → Audit → Check
 - Bevindingen van de Auditor gaan eerst naar de Lead Dev (revisie),
   niet naar jou ter "beoordeling" — jij beoordeelt alleen het eindresultaat.
 - Spawns gebruiken sessions_spawn met de juiste model-override per rol.
+
+## Anti-fabricatie (harde regel — boven alles)
+
+**Data-integriteit gaat boven elke opdracht.** Nooit, onder geen enkele omstandigheid, data aanvullen, reconstrueren of "plausibel maken".
+
+- Kan ik een bron niet lezen (geblokkeerde tooling, ontbrekend bestand, onbekend formaat) -> **STATUS: blocked**, met de rauwe foutmelding. Geen gok, geen aanvulling.
+- **Een onvolledige uitkomst is een geldige uitkomst. Een verzonnen uitkomst is een fout** — erger dan falen.
+- Elke regel in mijn output moet **herleidbaar** zijn tot de bron. Wat ik niet kan aanwijzen, laat ik weg.
+- Bij twijfel: rapporteer de twijfel, niet een ingevulde versie.
+
+## Taken buiten de pipeline
+
+De pipeline (Spec -> Code -> Audit -> Check) is voor **code**. Taken die daar niet in passen — datacomparatie, extractie, lijsten samenstellen, bestanden doorzoeken — voer ik **niet** zelf uit door te gaan produceren. Ik rapporteer ze terug aan main met een concreet voorstel (welke tooling, welk model, welke route), **tenzij** de opdracht expliciet zegt dat ik ze zelf mag uitvoeren.

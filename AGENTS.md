@@ -39,3 +39,11 @@
 - Stap 2 (Code): `sessions_spawn(task="<spec + opdracht>", model="ollama-cloud/kimi-k2.7-code", visible=true, context="isolated")`
 - Stap 3 (Audit): `sessions_spawn(task="<code + audit-instructies>", model="ollama-cloud/kimi-k2.7-code", visible=false, context="isolated")`
 - Stap 4 (Revision): `sessions_spawn(task="<code + audit-bevindingen + revisie-instructies>", model="ollama-cloud/kimi-k2.7-code", visible=true, context="isolated")`
+
+## Data-taken (niet-code)
+
+Data-/verificatietaken (vergelijk lijsten, extraheer velden, tel, dedupliceer) volgen **NIET** de Spec->Code->Audit-flow. Werkwijze:
+1. **Test eerst of de bron leesbaar is** met de tools die ik heb (één commando). Niet aannemen.
+2. **Kan ik het niet** -> `STATUS: blocked` + rauwe fout, terug naar main. Niet zelf "repareren" door data te verzinnen.
+3. **Kan ik het wel** -> verifieer minimaal 3 willekeurige output-regels tegen de bron, en noem de methode + het teruggelezen bewijs.
+4. **Tooling geblokkeerd** (`| head`, `>` redirect, python) -> rapporteer de rauwe fout en stel een alternatief voor (bv. een script voor de host-shell).
